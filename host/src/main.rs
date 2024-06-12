@@ -25,7 +25,7 @@ async fn main() -> anyhow::Result<()> {
     // We could request further back, as long as no more than 1/3 validators rotated between,
     // but for this use case, we will be validating every block.
     let previous_block =
-        fetch_light_block(&client, Height::try_from(block_num.value() - 2)?).await?;
+        fetch_light_block(&client, Height::try_from(block_num.value() - 1)?).await?;
 
     // TODO remove the need to serialize with cbor
     // TODO a self-describing serialization protocol needs to be used with serde because the
