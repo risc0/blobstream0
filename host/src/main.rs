@@ -28,6 +28,9 @@ async fn main() -> anyhow::Result<()> {
         fetch_light_block(&client, Height::try_from(block_num.value() - 2)?).await?;
 
     // TODO remove the need to serialize with cbor
+    // TODO a self-describing serialization protocol needs to be used with serde because the
+    //      LightBlock type requires it. Seems like proto would be most stable format, rather than
+    //      one used for RPC.
     let mut input_serialized = Vec::new();
     ciborium::into_writer(&(&previous_block, &next_block), &mut input_serialized)?;
 

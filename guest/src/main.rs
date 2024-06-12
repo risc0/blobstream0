@@ -5,6 +5,7 @@ use tendermint_light_client_verifier::{
 };
 
 fn main() {
+    // TODO this probably wants to be protobuf
     let (light_block_previous, light_block_next): (LightBlock, LightBlock) =
         ciborium::from_reader(env::stdin()).unwrap();
 
