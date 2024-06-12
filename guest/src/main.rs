@@ -16,18 +16,24 @@ fn main() {
         trusting_period: Duration::from_secs(60),
         clock_drift: Default::default(),
     };
+
+    // Check the next_validators hash, as verify_update_header leaves it for caller to check.
+    let trusted_state = light_block_previous.as_trusted_state();
+    assert_eq!(
+        trusted_state.next_validators.hash(),
+        trusted_state.next_validators_hash
+    );
+
     // TODO this verify time picked pretty arbitrarily, need to be after header time and within
     // trusting window.
     let verify_time = light_block_next.time() + Duration::from_secs(20);
     let verdict = vp.verify_update_header(
         // TODO should assert that next_validators is Some
         light_block_next.as_untrusted_state(),
-        light_block_previous.as_trusted_state(),
+        trusted_state,
         &opt,
         verify_time.unwrap(),
     );
-
-    // TODO check trusted.next_validators.hash() == trusted.next_validators_hash (might be done implicitly)
 
     assert!(
         matches!(verdict, Verdict::Success),
