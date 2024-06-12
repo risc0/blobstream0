@@ -3,7 +3,9 @@ use risc0_tm_core::LightClientCommit;
 use risc0_zkvm::guest::env;
 use tendermint::Hash;
 use tendermint_light_client_verifier::{
-    options::Options, types::LightBlock, ProdVerifier, Verdict, Verifier,
+    options::Options,
+    types::{LightBlock, TrustThreshold},
+    ProdVerifier, Verdict, Verifier,
 };
 
 fn main() {
@@ -13,9 +15,10 @@ fn main() {
 
     let vp = ProdVerifier::default();
     let opt = Options {
-        trust_threshold: Default::default(),
-        // TODO check these options (value pulled from TM repo)
-        trusting_period: Duration::from_secs(60),
+        // Trust threshold overriden to match security used by IBC default
+        // See context https://github.com/informalsystems/hermes/issues/2876
+        trust_threshold: TrustThreshold::TWO_THIRDS,
+        trusting_period: Duration::from_secs(64000),
         clock_drift: Default::default(),
     };
 
@@ -26,11 +29,16 @@ fn main() {
         trusted_state.next_validators_hash
     );
 
-    // TODO this verify time picked pretty arbitrarily, need to be after header time and within
+    let untrusted_state = light_block_next.as_untrusted_state();
+    // Assert that next validators is provided, such that verify will check it.
+    // Note: this is a bit redundant, given converting from LightBlock will always be Some,
+    // but this is to be sure the check is always done, even if refactored.
+    assert!(untrusted_state.next_validators.is_some());
+
+    // This verify time picked pretty arbitrarily, need to be after header time and within
     // trusting window.
-    let verify_time = light_block_next.time() + Duration::from_secs(20);
+    let verify_time = light_block_next.time() + Duration::from_secs(1);
     let verdict = vp.verify_update_header(
-        // TODO should assert that next_validators is Some
         light_block_next.as_untrusted_state(),
         trusted_state,
         &opt,
@@ -52,7 +60,7 @@ fn main() {
 
 fn expect_sha256_hash(block: &LightBlock) -> [u8; 32] {
     let Hash::Sha256(first_block_hash) = block.signed_header.header().hash() else {
-        unreachable!("");
+        unreachable!("Header hash should always be a non empty sha256");
     };
     first_block_hash
 }
