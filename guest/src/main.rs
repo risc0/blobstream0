@@ -38,12 +38,8 @@ fn main() {
     // This verify time picked pretty arbitrarily, need to be after header time and within
     // trusting window.
     let verify_time = light_block_next.time() + Duration::from_secs(1);
-    let verdict = vp.verify_update_header(
-        light_block_next.as_untrusted_state(),
-        trusted_state,
-        &opt,
-        verify_time.unwrap(),
-    );
+    let verdict =
+        vp.verify_update_header(untrusted_state, trusted_state, &opt, verify_time.unwrap());
 
     assert!(
         matches!(verdict, Verdict::Success),
