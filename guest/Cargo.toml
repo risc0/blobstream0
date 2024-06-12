@@ -10,3 +10,4 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 tendermint = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 ciborium = { workspace = true }
+risc0-tm-core = { path = "../core" }

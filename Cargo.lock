@@ -821,6 +821,7 @@ name = "guest"
 version = "0.1.0"
 dependencies = [
  "ciborium",
+ "risc0-tm-core",
  "risc0-zkvm",
  "serde",
  "serde_json",
@@ -917,6 +918,7 @@ dependencies = [
  "ciborium",
  "reqwest 0.12.4",
  "risc0-build",
+ "risc0-tm-core",
  "risc0-zkvm",
  "serde",
  "tendermint",
@@ -1825,6 +1827,13 @@ dependencies = [
  "num-traits",
  "risc0-binfmt",
  "risc0-zkp",
+ "serde",
+]
+
+[[package]]
+name = "risc0-tm-core"
+version = "0.1.0"
+dependencies = [
  "serde",
 ]
 

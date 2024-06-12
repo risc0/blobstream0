@@ -1,5 +1,7 @@
 use core::time::Duration;
+use risc0_tm_core::LightClientCommit;
 use risc0_zkvm::guest::env;
+use tendermint::Hash;
 use tendermint_light_client_verifier::{
     options::Options, types::LightBlock, ProdVerifier, Verdict, Verifier,
 };
@@ -41,6 +43,16 @@ fn main() {
         verdict
     );
 
-    env::commit_slice(light_block_previous.signed_header.header.hash().as_bytes());
-    env::commit_slice(light_block_next.signed_header.header.hash().as_bytes());
+    // TODO also mixing serialization with using default, resolve with above
+    env::commit(&LightClientCommit {
+        first_block_hash: expect_sha256_hash(&light_block_previous),
+        next_block_hash: expect_sha256_hash(&light_block_next),
+    });
+}
+
+fn expect_sha256_hash(block: &LightBlock) -> [u8; 32] {
+    let Hash::Sha256(first_block_hash) = block.signed_header.header().hash() else {
+        unreachable!("");
+    };
+    first_block_hash
 }

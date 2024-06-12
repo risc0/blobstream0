@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 risc0-zkvm = { version = "1.0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-serde = "1.0"
+serde = { workspace = true }
 anyhow = "1.0"
 reqwest = "0.12.4"
 tokio = { version = "1.38.0", features = ["rt", "macros"] }
@@ -15,6 +15,7 @@ tendermint = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 ciborium = { workspace = true }
+risc0-tm-core = { path = "../core" }
 
 [build-dependencies]
 risc0-build = "1.0.1"

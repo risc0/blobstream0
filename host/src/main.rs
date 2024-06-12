@@ -1,3 +1,4 @@
+use risc0_tm_core::LightClientCommit;
 use risc0_zkvm::{compute_image_id, default_prover, ExecutorEnv};
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
@@ -44,6 +45,16 @@ async fn main() -> anyhow::Result<()> {
     let prove_info = prover.prove(env, ELF)?;
     let receipt = prove_info.receipt;
 
+    let ret: LightClientCommit = receipt.journal.decode()?;
+    assert_eq!(
+        ret.first_block_hash.as_slice(),
+        previous_block.signed_header.header().hash().as_bytes()
+    );
+    assert_eq!(
+        ret.next_block_hash.as_slice(),
+        next_block.signed_header.header().hash().as_bytes()
+    );
+
     receipt.verify(guest_id)?;
 
     Ok(())
@@ -73,4 +84,3 @@ async fn fetch_light_block(
         Id::new([0; 20]),
     ))
 }
-// }
