@@ -817,19 +817,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 
 [[package]]
-name = "guest"
-version = "0.1.0"
-dependencies = [
- "ciborium",
- "risc0-tm-core",
- "risc0-zkvm",
- "serde",
- "serde_json",
- "tendermint",
- "tendermint-light-client-verifier",
-]
-
-[[package]]
 name = "h2"
 version = "0.3.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -916,6 +903,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "ciborium",
+ "methods",
  "reqwest 0.12.4",
  "risc0-build",
  "risc0-tm-core",
@@ -1226,6 +1214,13 @@ name = "memchr"
 version = "2.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c8640c5d730cb13ebd907d8d04b52f55ac9a2eec55b440c8892f40d56c76c1d"
+
+[[package]]
+name = "methods"
+version = "0.1.0"
+dependencies = [
+ "risc0-build",
+]
 
 [[package]]
 name = "mime"

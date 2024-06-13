@@ -16,6 +16,7 @@ tendermint-light-client-verifier = { workspace = true }
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 ciborium = { workspace = true }
 risc0-tm-core = { path = "../core" }
+methods = { path = "../methods" }
 
 [build-dependencies]
 risc0-build = "1.0.1"

@@ -1,10 +1,10 @@
+use methods::{GUEST_ELF, GUEST_ID};
 use risc0_tm_core::LightClientCommit;
-use risc0_zkvm::{compute_image_id, default_prover, ExecutorEnv};
+use risc0_zkvm::{default_prover, ExecutorEnv};
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
 
-const ELF: &[u8] = include_bytes!("../../target/riscv32im-risc0-zkvm-elf/release/guest");
 const CELESTIA_RPC_URL: &str = "https://rpc.celestia-mocha.com";
 
 #[tokio::main]
@@ -35,14 +35,13 @@ async fn main() -> anyhow::Result<()> {
     let mut input_serialized = Vec::new();
     ciborium::into_writer(&(&previous_block, &next_block), &mut input_serialized)?;
 
-    let guest_id = compute_image_id(ELF)?;
     let env = ExecutorEnv::builder()
         .write_slice(&input_serialized)
         .build()?;
 
     let prover = default_prover();
 
-    let prove_info = prover.prove(env, ELF)?;
+    let prove_info = prover.prove(env, GUEST_ELF)?;
     let receipt = prove_info.receipt;
 
     let ret: LightClientCommit = receipt.journal.decode()?;
@@ -55,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         next_block.signed_header.header().hash().as_bytes()
     );
 
-    receipt.verify(guest_id)?;
+    receipt.verify(GUEST_ID)?;
 
     Ok(())
 }
