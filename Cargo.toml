@@ -10,7 +10,7 @@ tendermint-light-client-verifier = { version = "0.37.0", default-features = fals
 	"rust-crypto",
 ] }
 serde = "1.0"
-# TODO remove hopefully both of these
+# TODO remove this once serialization switches over
 ciborium = "0.2"
 
 # Always optimize; building and running the guest takes much longer without optimization.
