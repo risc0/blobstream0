@@ -10,13 +10,11 @@ serde = { workspace = true }
 anyhow = "1.0"
 reqwest = "0.12.4"
 tokio = { version = "1.38.0", features = ["rt", "macros"] }
-# celestia-rpc = { version = "0.2.0", default-features = false }
 tendermint = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 ciborium = { workspace = true }
 risc0-tm-core = { path = "../core" }
-methods = { path = "../methods" }
+batch-guest = { path = "../batch-guest" }
+light-client-guest = { path = "../light-client-guest" }
 
-[build-dependencies]
-risc0-build = "1.0.1"

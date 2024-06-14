@@ -546,19 +546,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "guest"
-version = "0.1.0"
-dependencies = [
- "ciborium",
- "risc0-tm-core",
- "risc0-zkvm",
- "serde",
- "serde_json",
- "tendermint",
- "tendermint-light-client-verifier",
-]
-
-[[package]]
 name = "half"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -871,6 +858,9 @@ name = "risc0-tm-core"
 version = "0.1.0"
 dependencies = [
  "serde",
+ "thiserror",
+ "tiny-keccak",
+ "tiny-merkle",
 ]
 
 [[package]]
@@ -1135,6 +1125,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "thiserror"
+version = "1.0.61"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c546c80d6be4bc6a00c0f01730c08df82eaa7a7a61f11d656526506112cc1709"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.61"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46c3384250002a6d5af4d114f2845d37b57521033f30d5c3f46c4d70e1197533"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.66",
+]
+
+[[package]]
 name = "time"
 version = "0.3.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1161,6 +1171,34 @@ checksum = "3f252a68540fde3a3877aeea552b832b40ab9a69e318efd078774a01ddee1ccf"
 dependencies = [
  "num-conv",
  "time-core",
+]
+
+[[package]]
+name = "tiny-keccak"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c9d3793400a45f954c52e73d068316d76b6f4e36977e3fcebb13a2721e80237"
+dependencies = [
+ "crunchy",
+]
+
+[[package]]
+name = "tiny-merkle"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a29005a3e25530f2b9c7301f42b770dc90aa9dd78b7107d02a61f500393fcb7"
+
+[[package]]
+name = "tm-light-client"
+version = "0.1.0"
+dependencies = [
+ "ciborium",
+ "risc0-tm-core",
+ "risc0-zkvm",
+ "serde",
+ "serde_json",
+ "tendermint",
+ "tendermint-light-client-verifier",
 ]
 
 [[package]]

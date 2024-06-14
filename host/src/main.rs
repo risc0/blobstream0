@@ -1,4 +1,4 @@
-use methods::{GUEST_ELF, GUEST_ID};
+use light_client_guest::{TM_LIGHT_CLIENT_ELF, TM_LIGHT_CLIENT_ID};
 use risc0_tm_core::LightClientCommit;
 use risc0_zkvm::{default_prover, ExecutorEnv};
 use tendermint::{block::Height, node::Id, validator::Set};
@@ -41,7 +41,7 @@ async fn main() -> anyhow::Result<()> {
 
     let prover = default_prover();
 
-    let prove_info = prover.prove(env, GUEST_ELF)?;
+    let prove_info = prover.prove(env, TM_LIGHT_CLIENT_ELF)?;
     let receipt = prove_info.receipt;
 
     let ret: LightClientCommit = receipt.journal.decode()?;
@@ -54,7 +54,7 @@ async fn main() -> anyhow::Result<()> {
         next_block.signed_header.header().hash().as_bytes()
     );
 
-    receipt.verify(GUEST_ID)?;
+    receipt.verify(TM_LIGHT_CLIENT_ID)?;
 
     Ok(())
 }

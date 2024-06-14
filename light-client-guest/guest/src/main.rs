@@ -18,7 +18,8 @@ fn main() {
         // Trust threshold overriden to match security used by IBC default
         // See context https://github.com/informalsystems/hermes/issues/2876
         trust_threshold: TrustThreshold::TWO_THIRDS,
-        trusting_period: Duration::from_secs(64000),
+        // Two week trusting period (range of which blocks can be validated).
+        trusting_period: Duration::from_secs(1_209_600),
         clock_drift: Default::default(),
     };
 

@@ -37,6 +37,7 @@ fn keccak256(data: &[u8]) -> MerkleHash {
 }
 
 /// Merkle tree implementation for blobstream header proof and validation.
+#[derive(Debug)]
 pub struct MerkleTree {
     inner: TinyMerkleTree<KeccakHasher>,
 }
@@ -49,6 +50,11 @@ impl MerkleTree {
         }
     }
 
+    /// Returns merkle root of tree.
+    pub fn root(&self) -> MerkleHash {
+        self.inner.root()
+    }
+
     // TODO this return should be friendly to send to Ethereum.
     /// Generate merkle proof, which can be verified with [MerkleTree::verify_proof].
     pub fn generate_proof(&self, leaf: &MerkleHash) -> Option<TinyMerkleProof<KeccakHasher>> {
@@ -56,7 +62,7 @@ impl MerkleTree {
     }
 
     /// Verify generated proof created from [MerkleTree::generate_proof].
-    /// 
+    ///
     /// Errors if the calculated root does not match the one passed in.
     pub fn verify_proof(
         leaf: MerkleHash,
