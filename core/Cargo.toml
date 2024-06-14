@@ -5,3 +5,6 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
+tiny-merkle = "0.3"
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+thiserror = "1.0"
