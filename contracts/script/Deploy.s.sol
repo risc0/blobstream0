@@ -39,8 +39,8 @@ contract Blobstream0Deploy is Script {
         IRiscZeroVerifier verifier = new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID);
         console2.log("Deployed RiscZeroGroth16Verifier to", address(verifier));
 
-        Blobstream0 Blobstream0 = new Blobstream0(verifier);
-        console2.log("Deployed Blobstream0 to", address(Blobstream0));
+        Blobstream0 blobstream = new Blobstream0(verifier);
+        console2.log("Deployed Blobstream0 to", address(blobstream));
 
         vm.stopBroadcast();
     }

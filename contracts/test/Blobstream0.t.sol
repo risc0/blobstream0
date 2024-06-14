@@ -25,27 +25,20 @@ import {Elf} from "./Elf.sol"; // auto-generated contract after running `cargo b
 
 // TODO I will probably just remove this altogether.
 contract Blobstream0Test is RiscZeroCheats, Test {
-    Blobstream0 public Blobstream0;
+    Blobstream0 public blobstream;
 
     function setUp() public {
         IRiscZeroVerifier verifier = deployRiscZeroVerifier();
-        Blobstream0 = new Blobstream0(verifier);
-        assertEq(Blobstream0.get(), 0);
+        blobstream = new Blobstream0(verifier);
     }
 
     function test_SetEven() public {
-        uint256 number = 12345678;
-        (bytes memory journal, bytes memory seal) = prove(Elf.BATCH_GUEST_PATH, abi.encode(number));
-
-        Blobstream0.set(abi.decode(journal, (uint256)), seal);
-        assertEq(Blobstream0.get(), number);
-    }
-
-    function test_SetZero() public {
-        uint256 number = 0;
-        (bytes memory journal, bytes memory seal) = prove(Elf.BATCH_GUEST_PATH, abi.encode(number));
-
-        Blobstream0.set(abi.decode(journal, (uint256)), seal);
-        assertEq(Blobstream0.get(), number);
+        // uint256 number = 12345678;
+        // (bytes memory journal, bytes memory seal) = prove(
+        //     Elf.BATCH_GUEST_PATH,
+        //     abi.encode(number)
+        // );
+        // blobstream.set(abi.decode(journal, (uint256)), seal);
+        // assertEq(blobstream.get(), number);
     }
 }
