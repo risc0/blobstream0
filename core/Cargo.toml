@@ -5,6 +5,9 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
-tiny-merkle = "0.3"
-tiny-keccak = { version = "2.0", features = ["keccak"] }
+# TODO switch to release if TM hash type is included in release.
+nmt-rs = { git = "https://github.com/Sovereign-Labs/nmt-rs", rev = "543c0921a8f2d00cce06ca8622a392d401510852", features = [
+	"std",
+] }
 thiserror = "1.0"
+alloy-sol-types = { version = "0.7", features = ["json"] }

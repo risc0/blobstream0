@@ -33,6 +33,11 @@ contract Blobstream0 is IDAOracle {
     ///         (in this case, checking if a number is even) are considered valid.
     bytes32 public constant imageId = ImageID.BATCH_GUEST_ID;
 
+    // TODO this isn't used, update nonce on batch validation.
+    uint256 public proofNonce;
+
+    mapping(uint256 => bytes32) merkleRoots;
+
     /// @notice Initialize the contract, binding it to a specified RISC Zero verifier.
     constructor(IRiscZeroVerifier _verifier) {
         verifier = _verifier;
@@ -43,7 +48,18 @@ contract Blobstream0 is IDAOracle {
         DataRootTuple memory _tuple,
         BinaryMerkleProof memory _proof
     ) external view returns (bool) {
-        // TODO
-        return false;
+        if (_proofNonce == 0 || _proofNonce >= proofNonce) {
+            return false;
+        }
+
+        bytes32 root = merkleRoots[_proofNonce];
+
+        (bool isProofValid, ) = BinaryMerkleTree.verify(
+            root,
+            _proof,
+            abi.encode(_tuple)
+        );
+
+        return isProofValid;
     }
 }

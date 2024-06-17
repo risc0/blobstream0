@@ -46,12 +46,22 @@ async fn main() -> anyhow::Result<()> {
 
     let ret: LightClientCommit = receipt.journal.decode()?;
     assert_eq!(
-        ret.first_block_hash.as_slice(),
-        previous_block.signed_header.header().hash().as_bytes()
+        ret.first_data_root.as_slice(),
+        previous_block
+            .signed_header
+            .header()
+            .data_hash
+            .unwrap()
+            .as_bytes()
     );
     assert_eq!(
-        ret.next_block_hash.as_slice(),
-        next_block.signed_header.header().hash().as_bytes()
+        ret.next_data_root.as_slice(),
+        next_block
+            .signed_header
+            .header()
+            .data_hash
+            .unwrap()
+            .as_bytes()
     );
 
     receipt.verify(TM_LIGHT_CLIENT_ID)?;

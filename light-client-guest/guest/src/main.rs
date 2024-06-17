@@ -50,14 +50,15 @@ fn main() {
 
     // TODO also mixing serialization with using default, resolve with above
     env::commit(&LightClientCommit {
-        first_block_hash: expect_sha256_hash(&light_block_previous),
-        next_block_hash: expect_sha256_hash(&light_block_next),
+        first_data_root: expect_sha256_data_hash(&light_block_previous),
+        next_data_root: expect_sha256_data_hash(&light_block_next),
+        next_block_height: light_block_next.height().value(),
     });
 }
 
-fn expect_sha256_hash(block: &LightBlock) -> [u8; 32] {
-    let Hash::Sha256(first_block_hash) = block.signed_header.header().hash() else {
-        unreachable!("Header hash should always be a non empty sha256");
+fn expect_sha256_data_hash(block: &LightBlock) -> [u8; 32] {
+    let Some(Hash::Sha256(first_block_hash)) = block.signed_header.header().data_hash else {
+        unreachable!("Header data root should always be a non empty sha256");
     };
     first_block_hash
 }

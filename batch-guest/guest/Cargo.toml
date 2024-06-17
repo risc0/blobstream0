@@ -10,3 +10,4 @@ risc0-zkvm = { version = "1.0.1", default-features = false, features = ['std'] }
 light-client-guest = { path = "../../light-client-guest" }
 risc0-tm-core = { path = "../../core" }
 alloy-sol-types = "0.7"
+alloy-primitives = "0.7"

@@ -1,97 +1,98 @@
-use serde::{Deserialize, Serialize};
-use tiny_keccak::{Hasher, Keccak};
-use tiny_merkle::{
-    proof::{MerkleProof as TinyMerkleProof, Position},
-    MerkleTree as TinyMerkleTree,
+use alloy_sol_types::SolValue;
+use nmt_rs::{
+    simple_merkle::{db::MemDb, proof::Proof, tree::MerkleTree as SimpleMerkleTree},
+    TmSha2Hasher,
 };
+use serde::{Deserialize, Serialize};
+
+mod abi {
+    use alloy_sol_types::sol;
+
+    sol!(IBlobstream, "../contracts/abi/Blobstream0.abi");
+    sol!("../contracts/lib/blobstream-contracts/src/DataRootTuple.sol");
+}
+pub use abi::DataRootTuple;
 
 #[derive(Serialize, Deserialize)]
 pub struct LightClientCommit {
-    pub first_block_hash: [u8; 32],
-    pub next_block_hash: [u8; 32],
+    pub first_data_root: [u8; 32],
+    pub next_data_root: [u8; 32],
+    pub next_block_height: u64,
 }
 
 /// Type for the leaves in the [MerkleTree].
 pub type MerkleHash = [u8; 32];
 
 /// Proof generated for a leaf of a [MerkleTree].
-pub type MerkleProof = TinyMerkleProof<KeccakHasher>;
-
-// TODO avoid exposing this once below fixed
-#[derive(Clone, Debug)]
-pub struct KeccakHasher;
-impl tiny_merkle::Hasher for KeccakHasher {
-    type Hash = MerkleHash;
-
-    fn hash(value: &[u8]) -> Self::Hash {
-        keccak256(value)
-    }
-}
-
-fn keccak256(data: &[u8]) -> MerkleHash {
-    let mut hasher = Keccak::v256();
-    let mut hash = [0u8; 32];
-    hasher.update(data);
-    hasher.finalize(&mut hash);
-    hash
-}
+pub type MerkleProof = Proof<TmSha2Hasher>;
 
 /// Merkle tree implementation for blobstream header proof and validation.
-#[derive(Debug)]
 pub struct MerkleTree {
-    inner: TinyMerkleTree<KeccakHasher>,
+    inner: SimpleMerkleTree<MemDb<MerkleHash>, TmSha2Hasher>,
+}
+
+impl Default for MerkleTree {
+    fn default() -> Self {
+        Self {
+            inner: SimpleMerkleTree::new(),
+        }
+    }
 }
 
 impl MerkleTree {
+    pub fn push(&mut self, element: &DataRootTuple) {
+        self.push_raw(&element.abi_encode());
+    }
+
+    pub fn push_raw(&mut self, bytes: &[u8]) {
+        // TODO to match Celestia, this has to encode the height with the hash.
+        self.inner.push_raw_leaf(bytes)
+    }
+
     /// Construct new merkle tree from all leaves.
-    pub fn from_leaves(leaves: impl IntoIterator<Item = MerkleHash>) -> Self {
-        Self {
-            inner: TinyMerkleTree::from_leaves(leaves, None),
+    pub fn from_leaves<'a>(leaves: impl IntoIterator<Item = &'a DataRootTuple>) -> Self {
+        let mut s = Self::default();
+        for leaf in leaves {
+            s.push(leaf);
         }
+        s
     }
 
     /// Returns merkle root of tree.
-    pub fn root(&self) -> MerkleHash {
+    pub fn root(&mut self) -> MerkleHash {
         self.inner.root()
     }
 
-    // TODO this return should be friendly to send to Ethereum.
-    /// Generate merkle proof, which can be verified with [MerkleTree::verify_proof].
-    pub fn generate_proof(&self, leaf: &MerkleHash) -> Option<TinyMerkleProof<KeccakHasher>> {
-        self.inner.proof(leaf)
+    pub fn generate_proof(&mut self, index: usize) -> Proof<TmSha2Hasher> {
+        self.inner.build_range_proof(index..index + 1)
     }
 
-    /// Verify generated proof created from [MerkleTree::generate_proof].
-    ///
-    /// Errors if the calculated root does not match the one passed in.
-    pub fn verify_proof(
-        leaf: MerkleHash,
-        root: &MerkleHash,
-        proof: &MerkleProof,
-    ) -> Result<(), VerifyProofError> {
-        let mut hash = leaf;
-        let mut combine_buffer = [0u8; 64];
-        for p in proof.proofs.iter() {
-            if p.position == Position::Left {
-                combine_hashes(&p.data, &hash, &mut combine_buffer);
-                hash = <KeccakHasher as tiny_merkle::Hasher>::hash(combine_buffer.as_ref());
-            } else {
-                combine_hashes(&hash, &p.data, &mut combine_buffer);
-                hash = <KeccakHasher as tiny_merkle::Hasher>::hash(combine_buffer.as_ref());
-            }
-        }
+    // /// Verify generated proof created from [MerkleTree::generate_proof].
+    // ///
+    // /// Errors if the calculated root does not match the one passed in.
+    // pub fn verify_proof(
+    //     leaf: MerkleHash,
+    //     root: &MerkleHash,
+    //     proof: &MerkleProof,
+    // ) -> Result<(), VerifyProofError> {
+    //     let mut hash = leaf;
+    //     let mut combine_buffer = [0u8; 64];
+    //     for p in proof.proofs.iter() {
+    //         if p.position == Position::Left {
+    //             combine_hashes(&p.data, &hash, &mut combine_buffer);
+    //             hash = <Sha2Hasher as tiny_merkle::Hasher>::hash(combine_buffer.as_ref());
+    //         } else {
+    //             combine_hashes(&hash, &p.data, &mut combine_buffer);
+    //             hash = <Sha2Hasher as tiny_merkle::Hasher>::hash(combine_buffer.as_ref());
+    //         }
+    //     }
 
-        if hash == root.as_ref() {
-            Ok(())
-        } else {
-            Err(VerifyProofError)
-        }
-    }
-}
-
-fn combine_hashes(a: &MerkleHash, b: &MerkleHash, buffer: &mut [u8; 64]) {
-    buffer[..32].copy_from_slice(a);
-    buffer[32..].copy_from_slice(b);
+    //     if hash == root.as_ref() {
+    //         Ok(())
+    //     } else {
+    //         Err(VerifyProofError)
+    //     }
+    // }
 }
 
 #[derive(thiserror::Error, Debug)]
