@@ -11,3 +11,4 @@ nmt-rs = { git = "https://github.com/Sovereign-Labs/nmt-rs", rev = "543c0921a8f2
 ] }
 thiserror = "1.0"
 alloy-sol-types = { version = "0.7", features = ["json"] }
+serde_bytes = "0.11"

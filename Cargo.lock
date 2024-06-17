@@ -2588,6 +2588,7 @@ dependencies = [
  "alloy-sol-types",
  "nmt-rs",
  "serde",
+ "serde_bytes",
  "thiserror",
 ]
 

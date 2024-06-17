@@ -17,4 +17,3 @@ ciborium = { workspace = true }
 risc0-tm-core = { path = "../core" }
 batch-guest = { path = "../batch-guest" }
 light-client-guest = { path = "../light-client-guest" }
-

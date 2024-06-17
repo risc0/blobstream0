@@ -15,7 +15,9 @@ pub use abi::DataRootTuple;
 
 #[derive(Serialize, Deserialize)]
 pub struct LightClientCommit {
+    #[serde(with = "serde_bytes")]
     pub first_data_root: [u8; 32],
+    #[serde(with = "serde_bytes")]
     pub next_data_root: [u8; 32],
     pub next_block_height: u64,
 }
