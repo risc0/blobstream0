@@ -14,12 +14,18 @@ fn main() {
     for journal in input {
         env::verify(TM_LIGHT_CLIENT_ID, &journal).unwrap();
         let commit: LightClientCommit = from_slice(&journal).unwrap();
+        let height = U256::from(commit.next_block_height);
         if let Some(prev_hash) = verified_blocks.last() {
             // Assert that the blocks hash link to each other.
             assert_eq!(&commit.first_data_root, &prev_hash.dataRoot);
+
+            // For the purposes of batching, we want to assert that blocks are validated at every
+            // height with no gaps.
+            // TODO look into how skipped blocks are handled, will it be a missing height?
+            debug_assert_eq!(height, prev_hash.height);
         }
         verified_blocks.push(DataRootTuple {
-            height: U256::from(commit.next_block_height),
+            height,
             dataRoot: commit.next_data_root.into(),
         });
     }
