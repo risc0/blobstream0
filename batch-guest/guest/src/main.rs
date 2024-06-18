@@ -4,6 +4,7 @@ use light_client_guest::TM_LIGHT_CLIENT_ID;
 use risc0_tm_core::{DataRootTuple, LightClientCommit, MerkleTree};
 use risc0_zkvm::{guest::env, serde::from_slice};
 
+// TODO by default this will serialize poorly, optimize
 type JournalBytes = Vec<u8>;
 
 fn main() {

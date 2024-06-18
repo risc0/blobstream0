@@ -17,3 +17,11 @@ ciborium = { workspace = true }
 risc0-tm-core = { path = "../core" }
 batch-guest = { path = "../batch-guest" }
 light-client-guest = { path = "../light-client-guest" }
+
+[dev-dependencies]
+tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
+alloy-sol-types = "0.7"
+alloy = { version = "0.1", features = ["node-bindings", "network", "providers", "signer-local"] }
+alloy-contract = "0.1"
+serde_json = "1.0"
+serde_with = { version = "3.8", features = ["base64"] }

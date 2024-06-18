@@ -8,10 +8,17 @@ use serde::{Deserialize, Serialize};
 mod abi {
     use alloy_sol_types::sol;
 
-    sol!(IBlobstream, "../contracts/abi/Blobstream0.abi");
+    #[cfg(not(target_os = "zkvm"))]
+    sol!(
+        #[sol(rpc)]
+        IBlobstream,
+        "../contracts/artifacts/Blobstream0.json"
+    );
     sol!("../contracts/lib/blobstream-contracts/src/DataRootTuple.sol");
 }
 pub use abi::DataRootTuple;
+#[cfg(not(target_os = "zkvm"))]
+pub use abi::IBlobstream;
 
 #[derive(Serialize, Deserialize)]
 pub struct LightClientCommit {
