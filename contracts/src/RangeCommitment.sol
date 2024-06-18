@@ -18,6 +18,10 @@
 
 pragma solidity ^0.8.20;
 
-library ImageID {
-    bytes32 public constant BATCH_GUEST_ID = bytes32(0x2888833275ea34af1c6c460ad75f449b0f051b3852da4c6c9ed9ba13f0793bf7);
+/// @notice A struct for encoding the commitment of the range Tendermint block proof.
+struct RangeCommitment {
+    bytes32 trustedHeaderHash;
+    uint256 newHeight;
+    bytes32 newHeaderHash;
+    bytes32 merkleRoot;
 }

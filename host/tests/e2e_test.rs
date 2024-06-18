@@ -8,7 +8,7 @@ use host::fetch_light_block;
 use light_client_guest::TM_LIGHT_CLIENT_ELF;
 use reqwest::header;
 use risc0_tm_core::IBlobstream;
-use risc0_zkvm::{default_prover, ExecutorEnv};
+use risc0_zkvm::{default_prover, sha::Digestible, ExecutorEnv};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as, DisplayFromStr};
 use tendermint::block::Height;
@@ -123,7 +123,8 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
 
     let prove_info = prover.prove(env, BATCH_GUEST_ELF)?;
 
-    // Validate proof on-chain.
+    // NOTE: This doesn't support bonsai, only dev mode.
+    let seal: Vec<_> = [&[0u8; 4], prove_info.receipt.claim()?.digest().as_bytes()].concat();
     // TODO
 
     // Validate data root inclusion.

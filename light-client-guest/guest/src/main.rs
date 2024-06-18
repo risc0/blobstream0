@@ -50,10 +50,20 @@ fn main() {
 
     // TODO also mixing serialization with using default, resolve with above
     env::commit(&LightClientCommit {
-        first_data_root: expect_sha256_data_hash(&light_block_previous),
+        // TODO also committing block hashes, under the assumption that verifying those is more secure than
+        //      verifying just the data roots. This might not be necessary.
+        trusted_block_hash: expect_block_hash(&light_block_previous),
+        next_block_hash: expect_block_hash(&light_block_next),
         next_data_root: expect_sha256_data_hash(&light_block_next),
         next_block_height: light_block_next.height().value(),
     });
+}
+
+fn expect_block_hash(block: &LightBlock) -> [u8; 32] {
+    let Hash::Sha256(first_block_hash) = block.signed_header.header().hash() else {
+        unreachable!("Header hash should always be a non empty sha256");
+    };
+    first_block_hash
 }
 
 fn expect_sha256_data_hash(block: &LightBlock) -> [u8; 32] {

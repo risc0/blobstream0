@@ -14,8 +14,12 @@ mod abi {
         IBlobstream,
         "../contracts/artifacts/Blobstream0.json"
     );
+    // NOTE: These are likely redundant, but we cannot use the rpc codegen in zkvm
+    // TODO clean this up, likely best to just conditionally apply annotation
+    sol!("../contracts/src/RangeCommitment.sol");
     sol!("../contracts/lib/blobstream-contracts/src/DataRootTuple.sol");
 }
+pub use abi::RangeCommitment;
 pub use abi::DataRootTuple;
 #[cfg(not(target_os = "zkvm"))]
 pub use abi::IBlobstream;
@@ -23,7 +27,9 @@ pub use abi::IBlobstream;
 #[derive(Serialize, Deserialize)]
 pub struct LightClientCommit {
     #[serde(with = "serde_bytes")]
-    pub first_data_root: [u8; 32],
+    pub trusted_block_hash: [u8; 32],
+    #[serde(with = "serde_bytes")]
+    pub next_block_hash: [u8; 32],
     #[serde(with = "serde_bytes")]
     pub next_data_root: [u8; 32],
     pub next_block_height: u64,

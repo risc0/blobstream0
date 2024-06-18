@@ -19,6 +19,7 @@ pragma solidity ^0.8.20;
 import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
 import {ImageID} from "./ImageID.sol"; // auto-generated contract after running `cargo build`.
 import {IDAOracle} from "blobstream/IDAOracle.sol";
+import "./RangeCommitment.sol";
 import "blobstream/DataRootTuple.sol";
 import "blobstream/lib/tree/binary/BinaryMerkleTree.sol";
 
@@ -26,6 +27,7 @@ import "blobstream/lib/tree/binary/BinaryMerkleTree.sol";
 contract Blobstream0 is IDAOracle {
     /// @notice RISC Zero verifier contract address.
     IRiscZeroVerifier public immutable verifier;
+
     /// @notice Image ID of the only zkVM binary to accept verification from.
     ///         The image ID is similar to the address of a smart contract.
     ///         It uniquely represents the logic of that guest program,
@@ -36,11 +38,21 @@ contract Blobstream0 is IDAOracle {
     // TODO this isn't used, update nonce on batch validation.
     uint256 public proofNonce;
 
+    /// @notice This is a mapping of heights to merkle roots at those heights.
     mapping(uint256 => bytes32) merkleRoots;
 
     /// @notice Initialize the contract, binding it to a specified RISC Zero verifier.
     constructor(IRiscZeroVerifier _verifier) {
         verifier = _verifier;
+    }
+
+    /// @notice Validate a proof of a new header range, update state.
+    function updateRange(
+        RangeCommitment memory _commit,
+        bytes calldata _seal
+    ) external {
+        bytes memory journal = abi.encode(_commit);
+        verifier.verify(_seal, imageId, sha256(journal));
     }
 
     function verifyAttestation(
