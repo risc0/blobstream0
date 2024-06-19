@@ -1,15 +1,15 @@
 use alloy_sol_types::SolValue;
-use nmt_rs::{
-    simple_merkle::{db::MemDb, proof::Proof, tree::MerkleTree as SimpleMerkleTree},
-    TmSha2Hasher,
-};
 use serde::{Deserialize, Serialize};
+use sha2::Sha256;
+use tendermint::merkle::simple_hash_from_byte_vectors;
 
 mod abi {
     use alloy_sol_types::sol;
 
+    // TODO have this be built at compile time rather than manually
     #[cfg(not(target_os = "zkvm"))]
     sol!(
+        #[derive(Debug)]
         #[sol(rpc)]
         IBlobstream,
         "../contracts/artifacts/Blobstream0.json"
@@ -19,12 +19,12 @@ mod abi {
     sol!("../contracts/src/RangeCommitment.sol");
     sol!("../contracts/lib/blobstream-contracts/src/DataRootTuple.sol");
 }
-pub use abi::RangeCommitment;
 pub use abi::DataRootTuple;
 #[cfg(not(target_os = "zkvm"))]
 pub use abi::IBlobstream;
+pub use abi::RangeCommitment;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LightClientCommit {
     #[serde(with = "serde_bytes")]
     pub trusted_block_hash: [u8; 32],
@@ -38,30 +38,19 @@ pub struct LightClientCommit {
 /// Type for the leaves in the [MerkleTree].
 pub type MerkleHash = [u8; 32];
 
-/// Proof generated for a leaf of a [MerkleTree].
-pub type MerkleProof = Proof<TmSha2Hasher>;
-
 /// Merkle tree implementation for blobstream header proof and validation.
+#[derive(Default)]
 pub struct MerkleTree {
-    inner: SimpleMerkleTree<MemDb<MerkleHash>, TmSha2Hasher>,
-}
-
-impl Default for MerkleTree {
-    fn default() -> Self {
-        Self {
-            inner: SimpleMerkleTree::new(),
-        }
-    }
+    inner: Vec<Vec<u8>>,
 }
 
 impl MerkleTree {
     pub fn push(&mut self, element: &DataRootTuple) {
-        self.push_raw(&element.abi_encode());
+        self.push_raw(element.abi_encode());
     }
 
-    pub fn push_raw(&mut self, bytes: &[u8]) {
-        // TODO to match Celestia, this has to encode the height with the hash.
-        self.inner.push_raw_leaf(bytes)
+    pub fn push_raw(&mut self, bytes: Vec<u8>) {
+        self.inner.push(bytes)
     }
 
     /// Construct new merkle tree from all leaves.
@@ -75,11 +64,7 @@ impl MerkleTree {
 
     /// Returns merkle root of tree.
     pub fn root(&mut self) -> MerkleHash {
-        self.inner.root()
-    }
-
-    pub fn generate_proof(&mut self, index: usize) -> Proof<TmSha2Hasher> {
-        self.inner.build_range_proof(index..index + 1)
+        simple_hash_from_byte_vectors::<Sha256>(&self.inner)
     }
 
     // /// Verify generated proof created from [MerkleTree::generate_proof].

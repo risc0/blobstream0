@@ -1716,15 +1716,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nmt-rs"
-version = "0.1.0"
-source = "git+https://github.com/Sovereign-Labs/nmt-rs?rev=543c0921a8f2d00cce06ca8622a392d401510852#543c0921a8f2d00cce06ca8622a392d401510852"
-dependencies = [
- "bytes",
- "sha2",
-]
-
-[[package]]
 name = "num-bigint"
 version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2195,9 +2186,10 @@ version = "0.1.0"
 dependencies = [
  "alloy-contract",
  "alloy-sol-types",
- "nmt-rs",
  "serde",
  "serde_bytes",
+ "sha2",
+ "tendermint",
  "thiserror",
 ]
 

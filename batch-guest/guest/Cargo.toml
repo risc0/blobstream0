@@ -11,3 +11,6 @@ light-client-guest = { path = "../../light-client-guest" }
 risc0-tm-core = { path = "../../core" }
 alloy-sol-types = "0.7"
 alloy-primitives = "0.7"
+
+[patch.crates-io]
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }

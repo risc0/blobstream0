@@ -60,7 +60,7 @@ contract Blobstream0 is IDAOracle {
 
     /// @notice The latest height validated.
     // TODO the DataRootTuple has the height as a u256, but it should only be uint64. Verify this is fine.
-    uint64 latestHeight;
+    uint64 public latestHeight;
 
     /// @notice The latest block hash validated.
     /// @dev always update this in tandem with

@@ -5,13 +5,11 @@ edition = "2021"
 
 [dependencies]
 serde = { workspace = true }
-# TODO switch to release if TM hash type is included in release.
-nmt-rs = { git = "https://github.com/Sovereign-Labs/nmt-rs", rev = "543c0921a8f2d00cce06ca8622a392d401510852", features = [
-	"std",
-] }
 thiserror = "1.0"
 alloy-sol-types = { version = "0.7", features = ["json"] }
 serde_bytes = "0.11"
+tendermint = { workspace = true }
+sha2 = { workspace = true }
 
 [target.'cfg(not(target_os = "zkvm"))'.dependencies]
 alloy-contract = "0.1"

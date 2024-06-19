@@ -12,6 +12,7 @@ tendermint-light-client-verifier = { version = "0.37.0", default-features = fals
 serde = "1.0"
 # TODO remove this once serialization switches over
 ciborium = "0.2"
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
 
 # Always optimize; building and running the guest takes much longer without optimization.
 [profile.dev]
