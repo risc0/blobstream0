@@ -21,7 +21,7 @@ pragma solidity ^0.8.20;
 /// @notice A struct for encoding the commitment of the range Tendermint block proof.
 struct RangeCommitment {
     bytes32 trustedHeaderHash;
-    uint256 newHeight;
+    uint64 newHeight;
     bytes32 newHeaderHash;
     bytes32 merkleRoot;
 }

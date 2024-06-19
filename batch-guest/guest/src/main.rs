@@ -44,7 +44,7 @@ fn main() {
         trustedHeaderHash: trusted_header_hash
             .expect("must be at least one verified block")
             .into(),
-        newHeight: U256::from(latest_block.next_block_height),
+        newHeight: latest_block.next_block_height,
         newHeaderHash: latest_block.next_block_hash.into(),
         merkleRoot: merkle_tree.root().into(),
     };

@@ -29,7 +29,11 @@ contract Blobstream0Test is RiscZeroCheats, Test {
 
     function setUp() public {
         IRiscZeroVerifier verifier = deployRiscZeroVerifier();
-        blobstream = new Blobstream0(verifier);
+        blobstream = new Blobstream0(
+            verifier,
+            0x5D3BDD6B58620A0B6C5A9122863D11DA68EB18935D12A9F4E4CF1A27EB39F1AC,
+            10
+        );
     }
 
     function test_SetEven() public {

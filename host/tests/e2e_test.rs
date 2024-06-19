@@ -1,13 +1,13 @@
 use alloy::{
-    network::EthereumWallet, node_bindings::Anvil, providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
+    hex::FromHex, network::EthereumWallet, node_bindings::Anvil, primitives::FixedBytes,
+    providers::ProviderBuilder, signers::local::PrivateKeySigner,
 };
-use alloy_sol_types::{sol, SolCall};
+use alloy_sol_types::{sol, SolCall, SolType};
 use batch_guest::BATCH_GUEST_ELF;
 use host::fetch_light_block;
 use light_client_guest::TM_LIGHT_CLIENT_ELF;
 use reqwest::header;
-use risc0_tm_core::IBlobstream;
+use risc0_tm_core::IBlobstream::{self, RangeCommitment};
 use risc0_zkvm::{default_prover, sha::Digestible, ExecutorEnv};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as, DisplayFromStr};
@@ -65,22 +65,16 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     let verifier = MockVerifier::deploy(&provider, [0, 0, 0, 0].into()).await?;
 
     // Deploy the contract.
-    let contract = IBlobstream::deploy(&provider, verifier.address().clone()).await?;
-
-    // Somewhat hacky to do this manually, seems no Rust tooling for this.
-    let http_client = reqwest::Client::new();
-    let proof_response = http_client
-        .get(format!(
-            "{}/data_root_inclusion_proof?height={}&start={}&end={}",
-            CELESTIA_RPC_URL, BATCH_PROOF, BATCH_START, BATCH_END
-        ))
-        .header(header::CONTENT_TYPE, "application/json")
-        .send()
-        .await?;
-
-    let response = proof_response.json::<serde_json::Value>().await?;
-    let response: DataRootInclusionResponse =
-        serde_json::from_value(response["result"]["proof"].clone())?;
+    let contract = IBlobstream::deploy(
+        &provider,
+        verifier.address().clone(),
+        // Uses Celestia block hash at height
+        FixedBytes::<32>::from_hex(
+            "5D3BDD6B58620A0B6C5A9122863D11DA68EB18935D12A9F4E4CF1A27EB39F1AC",
+        )?,
+        10,
+    )
+    .await?;
 
     let client = HttpClient::new(CELESTIA_RPC_URL)?;
     // let commit = client.latest_commit().await?;
@@ -123,8 +117,33 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
 
     let prove_info = prover.prove(env, BATCH_GUEST_ELF)?;
 
+    let range_commitment = RangeCommitment::abi_decode(&prove_info.receipt.journal.bytes, true)?;
+
     // NOTE: This doesn't support bonsai, only dev mode.
     let seal: Vec<_> = [&[0u8; 4], prove_info.receipt.claim()?.digest().as_bytes()].concat();
+
+    // Update range and await tx to be processed.
+    contract
+        .updateRange(range_commitment, seal.into())
+        .send()
+        .await?
+        .watch()
+        .await?;
+
+    // Somewhat hacky to do this manually, seems no Rust tooling for this endpoint.
+    let http_client = reqwest::Client::new();
+    let proof_response = http_client
+        .get(format!(
+            "{}/data_root_inclusion_proof?height={}&start={}&end={}",
+            CELESTIA_RPC_URL, BATCH_PROOF, BATCH_START, BATCH_END
+        ))
+        .header(header::CONTENT_TYPE, "application/json")
+        .send()
+        .await?;
+
+    let response = proof_response.json::<serde_json::Value>().await?;
+    let response: DataRootInclusionResponse =
+        serde_json::from_value(response["result"]["proof"].clone())?;
     // TODO
 
     // Validate data root inclusion.
