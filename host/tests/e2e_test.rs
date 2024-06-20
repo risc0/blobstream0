@@ -87,11 +87,6 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     // let commit = client.latest_commit().await?;
     let query_height = Height::try_from(BATCH_START - 1)?;
     let mut previous_block = fetch_light_block(&client, query_height).await?;
-    println!(
-        "P header hash {}, data root {}",
-        previous_block.signed_header.header().hash(),
-        previous_block.signed_header.header().data_hash.unwrap()
-    );
 
     let prover = default_prover();
 
@@ -115,12 +110,6 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
         let receipt = prove_info.receipt;
 
         let commit: LightClientCommit = receipt.journal.decode()?;
-        // println!(
-        //     "height {}, header hash {}, data root {}",
-        //     height,
-        //     next_block.signed_header.header().hash(),
-        //     next_block.signed_header.header().data_hash.unwrap()
-        // );
         assert_eq!(height, commit.next_block_height);
         assert_eq!(
             next_block
