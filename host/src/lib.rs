@@ -1,8 +1,13 @@
+use batch_guest::BATCH_GUEST_ELF;
+use light_client_guest::TM_LIGHT_CLIENT_ELF;
+use risc0_tm_core::LightClientCommit;
+use risc0_zkvm::{default_prover, ExecutorEnv, Receipt};
+use std::ops::Range;
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
 
-pub async fn fetch_light_block(
+async fn fetch_light_block(
     client: &HttpClient,
     block_height: Height,
 ) -> anyhow::Result<LightBlock> {
@@ -25,4 +30,53 @@ pub async fn fetch_light_block(
         // TODO do we care about this ID?
         Id::new([0; 20]),
     ))
+}
+
+pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow::Result<Receipt> {
+    let prover = default_prover();
+
+    let query_height = Height::try_from(range.start - 1)?;
+    let mut previous_block = fetch_light_block(&client, query_height).await?;
+
+    let mut batch_env_builder = ExecutorEnv::builder();
+    let mut batch_receipts = Vec::new();
+    for height in range {
+        let next_block = fetch_light_block(&client, Height::try_from(height)?).await?;
+
+        // TODO remove the need to serialize with cbor
+        // TODO a self-describing serialization protocol needs to be used with serde because the
+        //      LightBlock type requires it. Seems like proto would be most stable format, rather than
+        //      one used for RPC.
+        let mut input_serialized = Vec::new();
+        ciborium::into_writer(&(&previous_block, &next_block), &mut input_serialized)?;
+
+        let env = ExecutorEnv::builder()
+            .write_slice(&input_serialized)
+            .build()?;
+
+        let prove_info = prover.prove(env, TM_LIGHT_CLIENT_ELF)?;
+        let receipt = prove_info.receipt;
+
+        let commit: LightClientCommit = receipt.journal.decode()?;
+        assert_eq!(height, commit.next_block_height);
+        assert_eq!(
+            next_block
+                .signed_header
+                .header()
+                .data_hash
+                .unwrap()
+                .as_bytes(),
+            &commit.next_data_root
+        );
+
+        batch_receipts.push(receipt.journal.bytes.clone());
+        batch_env_builder.add_assumption(receipt);
+        previous_block = next_block;
+    }
+
+    let env = batch_env_builder.write(&batch_receipts)?.build()?;
+
+    let prove_info = prover.prove(env, BATCH_GUEST_ELF)?;
+
+    Ok(prove_info.receipt)
 }

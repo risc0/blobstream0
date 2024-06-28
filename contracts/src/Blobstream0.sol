@@ -67,7 +67,7 @@ contract Blobstream0 is IDAOracle {
     // TODO product test if useful to store historical hashes since they are already available?
     bytes32 public latestBlockHash;
 
-    /// @notice This is a mapping of heights to merkle roots at those heights.
+    /// @notice This is a mapping of proof nonces to merkle roots at those heights.
     mapping(uint256 => bytes32) merkleRoots;
 
     /// @notice Initialize the contract, binding it to a specified RISC Zero verifier.
