@@ -3,5 +3,8 @@
         "./light-client-guest/guest/Cargo.toml",
         "./batch-guest/guest/Cargo.toml",
         "./host/Cargo.toml"
-    ]
+    ],
+    "rust-analyzer.check.extraEnv": {
+        "RISC0_SKIP_BUILD": "1",
+    }
 }
