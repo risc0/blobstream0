@@ -59,7 +59,8 @@ pub async fn prove_block(
         .write_slice(&input_serialized)
         .build()?;
 
-    let prove_info = prover.prove(env, TM_LIGHT_CLIENT_ELF)?;
+    // Note: must block in place to not have issues with Bonsai blocking client when selected
+    let prove_info = tokio::task::block_in_place(|| prover.prove(env, TM_LIGHT_CLIENT_ELF))?;
     let receipt = prove_info.receipt;
 
     let commit: LightClientCommit = receipt.journal.decode()?;
@@ -104,7 +105,8 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
 
     let env = batch_env_builder.write(&batch_receipts)?.build()?;
 
-    let prove_info = prover.prove(env, BATCH_GUEST_ELF)?;
+    // Note: must block in place to not have issues with Bonsai blocking client when selected
+    let prove_info = tokio::task::block_in_place(|| prover.prove(env, BATCH_GUEST_ELF))?;
 
     Ok(prove_info.receipt)
 }
