@@ -1,7 +1,13 @@
+use alloy::{network::Network, primitives::TxHash, providers::Provider, transports::Transport};
+use alloy_sol_types::SolValue;
 use batch_guest::BATCH_GUEST_ELF;
 use light_client_guest::TM_LIGHT_CLIENT_ELF;
-use risc0_tm_core::LightClientCommit;
-use risc0_zkvm::{default_prover, ExecutorEnv, Prover, Receipt};
+use risc0_ethereum_contracts::groth16;
+use risc0_tm_core::{
+    IBlobstream::{IBlobstreamInstance, RangeCommitment},
+    LightClientCommit,
+};
+use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, Receipt};
 use std::ops::Range;
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
@@ -60,7 +66,7 @@ pub async fn prove_block(
         .build()?;
 
     // Note: must block in place to not have issues with Bonsai blocking client when selected
-    let prove_info = tokio::task::block_in_place(|| prover.prove(env, TM_LIGHT_CLIENT_ELF))?;
+    let prove_info = tokio::task::block_in_place(move || prover.prove(env, TM_LIGHT_CLIENT_ELF))?;
     let receipt = prove_info.receipt;
 
     let commit: LightClientCommit = receipt.journal.decode()?;
@@ -107,7 +113,34 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
     let env = batch_env_builder.write(&batch_receipts)?.build()?;
 
     // Note: must block in place to not have issues with Bonsai blocking client when selected
-    let prove_info = tokio::task::block_in_place(|| prover.prove(env, BATCH_GUEST_ELF))?;
+    let prove_info = tokio::task::block_in_place(move || prover.prove(env, BATCH_GUEST_ELF))?;
 
     Ok(prove_info.receipt)
+}
+
+/// Post batch proof to Eth based chain.
+pub async fn post_batch<T, P, N>(
+    contract: &IBlobstreamInstance<T, P, N>,
+    receipt: &Receipt,
+) -> anyhow::Result<TxHash>
+where
+    T: Transport + Clone,
+    P: Provider<T, N>,
+    N: Network,
+{
+    let seal = match is_dev_mode() {
+        true => [&[0u8; 4], receipt.claim()?.digest().as_bytes()].concat(),
+        false => groth16::encode(receipt.inner.groth16()?.seal.clone())?,
+    };
+
+    let range_commitment = RangeCommitment::abi_decode(&receipt.journal.bytes, true)?;
+
+    let res = contract
+        .updateRange(range_commitment, seal.into())
+        .send()
+        .await?
+        .watch()
+        .await?;
+
+    Ok(res)
 }

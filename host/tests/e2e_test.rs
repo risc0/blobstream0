@@ -6,11 +6,10 @@ use alloy::{
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
-use alloy_sol_types::{sol, SolType};
-use host::prove_block_range;
+use alloy_sol_types::sol;
+use host::{post_batch, prove_block_range};
 use reqwest::header;
-use risc0_tm_core::IBlobstream::{self, BinaryMerkleProof, DataRootTuple, RangeCommitment};
-use risc0_zkvm::sha::Digestible;
+use risc0_tm_core::IBlobstream::{self, BinaryMerkleProof, DataRootTuple};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as, DisplayFromStr};
 use tendermint_rpc::HttpClient;
@@ -43,7 +42,7 @@ struct DataRootInclusionResponse {
     aunts: Vec<Vec<u8>>,
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn e2e_basic_range() -> anyhow::Result<()> {
     // Set dev mode for test.
     std::env::set_var("RISC0_DEV_MODE", "true");
@@ -81,19 +80,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
 
     let receipt = prove_block_range(&client, BATCH_START..BATCH_END).await?;
 
-    let range_commitment = RangeCommitment::abi_decode(&receipt.journal.bytes, true)?;
-
-    // NOTE: This doesn't support bonsai, only dev mode.
-    let seal: Vec<_> = [&[0u8; 4], receipt.claim()?.digest().as_bytes()].concat();
-
-    // Update range and await tx to be processed.
-    println!("calling contract to update range");
-    contract
-        .updateRange(range_commitment, seal.into())
-        .send()
-        .await?
-        .watch()
-        .await?;
+    post_batch(&contract, &receipt).await?;
 
     let height = contract.latestHeight().call().await?;
     assert_eq!(height._0, 19);
@@ -119,7 +106,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
             U256::from(1),
             DataRootTuple {
                 height: U256::from(PROOF_HEIGHT),
-                // TODO this is fixed from on chain, but
+                // TODO this is fixed from on chain, but could be pulled from node to be dynamic
                 dataRoot: FixedBytes::<32>::from_hex(
                     "3D96B7D238E7E0456F6AF8E7CDF0A67BD6CF9C2089ECB559C659DCAA1F880353",
                 )?,
