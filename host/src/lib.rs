@@ -90,6 +90,7 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
 
     let mut batch_env_builder = ExecutorEnv::builder();
     let mut batch_receipts = Vec::new();
+    // TODO(opt): Retrieving light blocks and proving can be parallelized
     for height in range {
         // TODO this will likely have to check chain height and wait for new block to be published
         //      or have a separate function do this.
