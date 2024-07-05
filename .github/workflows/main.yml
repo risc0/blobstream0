@@ -82,6 +82,10 @@ jobs:
           toolchain-version: ${{ env.RISC0_TOOLCHAIN_VERSION }}
           features: ${{ matrix.feature }}
       - uses: risc0/foundry-toolchain@2fe7e70b520f62368a0e3c464f997df07ede420f
+      # TODO this likely shouldn't be needed https://github.com/risc0/blobstream0/issues/3
+      - name: build forge contracts
+        run: forge build
+        working-directory: contracts
       - name: build workspace
         run: cargo test --workspace --timings --no-run
       - name: test workspace
