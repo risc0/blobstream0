@@ -73,9 +73,9 @@ jobs:
       - if: matrix.feature == 'cuda'
         uses: risc0/risc0/.github/actions/cuda@main
       - uses: risc0/risc0/.github/actions/rustup@main
-      - uses: risc0/risc0/.github/actions/sccache@main
-        with:
-          key: ${{ matrix.os }}-${{ matrix.feature }}
+      # - uses: risc0/risc0/.github/actions/sccache@main
+        # with:
+          # key: ${{ matrix.os }}-${{ matrix.feature }}
       - uses: ./.github/actions/cargo-risczero-install
         with:
           ref: ${{ env.RISC0_MONOREPO_REF }}
@@ -90,11 +90,11 @@ jobs:
         run: cargo test --workspace --timings --no-run
       - name: test workspace
         run: cargo test --workspace --timings
-      - uses: actions/upload-artifact@v3
-        with:
-          name: cargo-timings-${{ matrix.os }}-${{ matrix.device }}
-          path: target/cargo-timings/
-          retention-days: 5
+      # - uses: actions/upload-artifact@v3
+      #   with:
+      #     name: cargo-timings-${{ matrix.os }}-${{ matrix.device }}
+      #     path: target/cargo-timings/
+      #     retention-days: 5
       - run: forge test -vvv
         working-directory: contracts
-      - run: sccache --show-stats
+      # - run: sccache --show-stats
