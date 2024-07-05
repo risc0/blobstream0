@@ -66,33 +66,6 @@ impl MerkleTree {
     pub fn root(&mut self) -> MerkleHash {
         simple_hash_from_byte_vectors::<Sha256>(&self.inner)
     }
-
-    // /// Verify generated proof created from [MerkleTree::generate_proof].
-    // ///
-    // /// Errors if the calculated root does not match the one passed in.
-    // pub fn verify_proof(
-    //     leaf: MerkleHash,
-    //     root: &MerkleHash,
-    //     proof: &MerkleProof,
-    // ) -> Result<(), VerifyProofError> {
-    //     let mut hash = leaf;
-    //     let mut combine_buffer = [0u8; 64];
-    //     for p in proof.proofs.iter() {
-    //         if p.position == Position::Left {
-    //             combine_hashes(&p.data, &hash, &mut combine_buffer);
-    //             hash = <Sha2Hasher as tiny_merkle::Hasher>::hash(combine_buffer.as_ref());
-    //         } else {
-    //             combine_hashes(&hash, &p.data, &mut combine_buffer);
-    //             hash = <Sha2Hasher as tiny_merkle::Hasher>::hash(combine_buffer.as_ref());
-    //         }
-    //     }
-
-    //     if hash == root.as_ref() {
-    //         Ok(())
-    //     } else {
-    //         Err(VerifyProofError)
-    //     }
-    // }
 }
 
 #[derive(thiserror::Error, Debug)]
