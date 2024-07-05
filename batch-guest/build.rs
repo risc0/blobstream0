@@ -59,8 +59,6 @@ fn main() {
         // Use guest directory.
         .join("contracts");
 
-    println!("cargo:rerun-if-changed={}", contracts_dir.display());
-
     // Rebuild contracts after generating image ID to avoid inconsistencies.
     Command::new("forge")
         .args(["build", "--silent"])
@@ -70,7 +68,8 @@ fn main() {
 
     // Read and deserialize JSON artifact
     let file = File::open(
-        contracts_dir.clone()
+        contracts_dir
+            .clone()
             .join("out")
             .join("Blobstream0.sol")
             .join("Blobstream0.json"),
@@ -86,4 +85,8 @@ fn main() {
 
     // Write the formatted JSON
     serde_json::to_writer_pretty(output_file, &artifact).expect("Failed to write formatted JSON");
+
+    // NOTE: This should not be a circular update, as the code files are not updated with this, just
+    //       the built artifact that is pointed to.
+    println!("cargo:rerun-if-changed={}", contracts_dir.display());
 }
