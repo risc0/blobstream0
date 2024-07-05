@@ -15,7 +15,10 @@
 use alloy_primitives::U256;
 use alloy_sol_types::SolValue;
 use light_client_guest::TM_LIGHT_CLIENT_ID;
-use risc0_tm_core::{DataRootTuple, LightClientCommit, MerkleTree, RangeCommitment};
+use risc0_tm_core::{
+    IBlobstream::{DataRootTuple, RangeCommitment},
+    LightClientCommit, MerkleTree,
+};
 use risc0_zkvm::{guest::env, serde::from_slice};
 
 // TODO by default this will serialize poorly, optimize
