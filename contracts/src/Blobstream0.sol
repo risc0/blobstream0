@@ -32,10 +32,7 @@ contract Blobstream0 is IDAOracle {
     /// @param endBlock The end block of the block range.
     /// @param dataCommitment The data commitment for the block range.
     event DataCommitmentStored(
-        uint256 proofNonce,
-        uint64 indexed startBlock,
-        uint64 indexed endBlock,
-        bytes32 indexed dataCommitment
+        uint256 proofNonce, uint64 indexed startBlock, uint64 indexed endBlock, bytes32 indexed dataCommitment
     );
 
     /// @notice Emits event with the new head update.
@@ -71,11 +68,7 @@ contract Blobstream0 is IDAOracle {
     mapping(uint256 => bytes32) merkleRoots;
 
     /// @notice Initialize the contract, binding it to a specified RISC Zero verifier.
-    constructor(
-        IRiscZeroVerifier _verifier,
-        bytes32 _trustedHash,
-        uint64 _trustedHeight
-    ) {
+    constructor(IRiscZeroVerifier _verifier, bytes32 _trustedHash, uint64 _trustedHeight) {
         verifier = _verifier;
         latestBlockHash = _trustedHash;
         latestHeight = _trustedHeight;
@@ -84,10 +77,7 @@ contract Blobstream0 is IDAOracle {
     }
 
     /// @notice Validate a proof of a new header range, update state.
-    function updateRange(
-        RangeCommitment memory _commit,
-        bytes calldata _seal
-    ) external {
+    function updateRange(RangeCommitment memory _commit, bytes calldata _seal) external {
         if (_commit.newHeight <= latestHeight) {
             revert InvalidTargetHeight();
         }
@@ -112,22 +102,18 @@ contract Blobstream0 is IDAOracle {
     /// @param _tuple Data root tuple to prove inclusion of.
     /// @param _proof Binary Merkle tree proof that `tuple` is in the root at `_tupleRootNonce`.
     /// @return `true` is proof is valid, `false` otherwise.
-    function verifyAttestation(
-        uint256 _proofNonce,
-        DataRootTuple memory _tuple,
-        BinaryMerkleProof memory _proof
-    ) external view returns (bool) {
+    function verifyAttestation(uint256 _proofNonce, DataRootTuple memory _tuple, BinaryMerkleProof memory _proof)
+        external
+        view
+        returns (bool)
+    {
         if (_proofNonce == 0 || _proofNonce >= proofNonce) {
             return false;
         }
 
         bytes32 root = merkleRoots[_proofNonce];
 
-        (bool isProofValid, ) = BinaryMerkleTree.verify(
-            root,
-            _proof,
-            abi.encode(_tuple)
-        );
+        (bool isProofValid,) = BinaryMerkleTree.verify(root, _proof, abi.encode(_tuple));
 
         return isProofValid;
     }

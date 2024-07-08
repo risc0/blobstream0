@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-serde = { workspace = true }
-thiserror = "1.0"
 alloy-sol-types = { version = "0.7", features = ["json"] }
+serde = { workspace = true }
 serde_bytes = "0.11"
-tendermint = { workspace = true }
 sha2 = { workspace = true }
+tendermint = { workspace = true }
+thiserror = "1.0"
 
 [target.'cfg(not(target_os = "zkvm"))'.dependencies]
 alloy-contract = "0.1"

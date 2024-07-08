@@ -1,3 +1,18 @@
+// Copyright 2024 RISC Zero, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+use abi::IBlobstream::DataRootTuple;
 use alloy_sol_types::SolValue;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
@@ -14,15 +29,14 @@ mod abi {
         IBlobstream,
         "../contracts/artifacts/Blobstream0.json"
     );
-    // NOTE: These are likely redundant, but we cannot use the rpc codegen in zkvm
-    // TODO clean this up, likely best to just conditionally apply annotation
-    sol!("../contracts/src/RangeCommitment.sol");
-    sol!("../contracts/lib/blobstream-contracts/src/DataRootTuple.sol");
+    #[cfg(target_os = "zkvm")]
+    sol!(
+        #[derive(Debug)]
+        IBlobstream,
+        "../contracts/artifacts/Blobstream0.json"
+    );
 }
-pub use abi::DataRootTuple;
-#[cfg(not(target_os = "zkvm"))]
 pub use abi::IBlobstream;
-pub use abi::RangeCommitment;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LightClientCommit {
