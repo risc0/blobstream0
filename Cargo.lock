@@ -4878,6 +4878,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "service"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "alloy-sol-types",
+ "anyhow",
+ "bincode",
+ "clap",
+ "host",
+ "risc0-tm-core",
+ "tendermint-rpc",
+ "tokio",
+ "tracing-subscriber 0.3.18",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
