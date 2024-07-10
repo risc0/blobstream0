@@ -24,11 +24,11 @@ use risc0_tm_core::{
 use risc0_zkvm::{
     default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, ProverOpts, Receipt,
 };
-use tracing::instrument;
 use std::ops::Range;
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
+use tracing::instrument;
 
 async fn fetch_light_block(
     client: &HttpClient,
@@ -63,6 +63,7 @@ pub struct LightBlockProof {
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
+#[instrument(skip(prover, client, previous_block))]
 pub async fn prove_block(
     prover: &dyn Prover,
     client: &HttpClient,
@@ -131,6 +132,7 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
     let env = batch_env_builder.write(&batch_receipts)?.build()?;
 
     // Note: must block in place to not have issues with Bonsai blocking client when selected
+    tracing::debug!("Proving batch of blocks");
     let prove_info = tokio::task::block_in_place(move || {
         prover.prove_with_opts(env, BATCH_GUEST_ELF, &ProverOpts::groth16())
     })?;

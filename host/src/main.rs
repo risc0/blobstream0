@@ -139,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
             let verifier_address: Address = if let Some(address) = deploy.verifier_address {
                 address.parse()?
             } else {
-                if deploy.dev {
+                let deployed_address = if deploy.dev {
                     tracing::debug!("Deploying mock verifier");
                     MockVerifier::deploy(&provider, [0, 0, 0, 0].into())
                         .await?
@@ -155,7 +155,9 @@ async fn main() -> anyhow::Result<()> {
                     .await?
                     .address()
                     .clone()
-                }
+                };
+                println!("deployed verifier to address: {}", deployed_address);
+                deployed_address
             };
 
             // Deploy the contract.

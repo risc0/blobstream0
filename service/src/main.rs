@@ -75,6 +75,7 @@ async fn main() -> anyhow::Result<()> {
 
     let contract = IBlobstream::new(eth_address, provider);
 
+    tracing::info!("Starting service");
     BlobstreamService::new(contract, tm_client, batch_size)
         .spawn()
         .await;

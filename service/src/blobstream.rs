@@ -52,13 +52,18 @@ where
             // TODO check this hash against tm node as sanity check
             let _hash = hash.unwrap().unwrap()._0;
             let tm_height = tm_height.unwrap().unwrap();
+            tracing::info!("Contract height: {height}, tendermint height: {tm_height}");
 
             // TODO can prove proactively, this is very basic impl
             let block_target = height + self.batch_size;
             if block_target > tm_height.value() {
+                let wait_time = 15 * (block_target - tm_height.value());
+                tracing::info!(
+                    "Not enough tendermint blocks to create batch, waiting {} seconds",
+                    wait_time
+                );
                 // Cannot create a batch yet, wait until ready
-                tokio::time::sleep(Duration::from_secs(15 * (block_target - tm_height.value())))
-                    .await;
+                tokio::time::sleep(Duration::from_secs(wait_time)).await;
                 continue;
             }
 
