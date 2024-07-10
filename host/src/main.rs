@@ -19,7 +19,7 @@ use std::path::PathBuf;
 use alloy::{
     hex::FromHex,
     network::EthereumWallet,
-    primitives::{Address, FixedBytes},
+    primitives::{hex, Address, FixedBytes},
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
@@ -38,6 +38,18 @@ sol!(
     // TODO probably not ideal to reference build directory, fine for now.
     "../contracts/out/RiscZeroMockVerifier.sol/RiscZeroMockVerifier.json"
 );
+sol!(
+    #[sol(rpc)]
+    RiscZeroGroth16Verifier,
+    // TODO probably not ideal to reference build directory, fine for now.
+    "../contracts/out/RiscZeroGroth16Verifier.sol/RiscZeroGroth16Verifier.json"
+);
+
+// Pulled from https://github.com/risc0/risc0-ethereum/blob/ebec385cc526adb9279c1af55d699c645ca6d694/contracts/src/groth16/ControlID.sol
+const CONTROL_ID: [u8; 32] =
+    hex!("a516a057c9fbf5629106300934d48e0e775d4230e41e503347cad96fcbde7e2e");
+const BN254_CONTROL_ID: [u8; 32] =
+    hex!("0eb6febcf06c5df079111be116f79bd8c7e85dc9448776ef9a59aaf2624ab551");
 
 #[derive(Parser, Debug)]
 #[command(name = "blobstream0-cli")]
@@ -128,12 +140,21 @@ async fn main() -> anyhow::Result<()> {
                 address.parse()?
             } else {
                 if deploy.dev {
+                    tracing::debug!("Deploying mock verifier");
                     MockVerifier::deploy(&provider, [0, 0, 0, 0].into())
                         .await?
                         .address()
                         .clone()
                 } else {
-                    unimplemented!("Cannot deploy groth16 verifier yet")
+                    tracing::debug!("Deploying groth16 verifier");
+                    RiscZeroGroth16Verifier::deploy(
+                        &provider,
+                        CONTROL_ID.into(),
+                        BN254_CONTROL_ID.into(),
+                    )
+                    .await?
+                    .address()
+                    .clone()
                 }
             };
 

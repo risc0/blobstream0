@@ -50,7 +50,7 @@ where
             // TODO handle errors gracefully
             let height = height.unwrap().unwrap()._0;
             // TODO check this hash against tm node as sanity check
-            let hash = hash.unwrap().unwrap()._0;
+            let _hash = hash.unwrap().unwrap()._0;
             let tm_height = tm_height.unwrap().unwrap();
 
             // TODO can prove proactively, this is very basic impl

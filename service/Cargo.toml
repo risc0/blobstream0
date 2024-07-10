@@ -23,3 +23,4 @@ tendermint-rpc = { workspace = true, features = ["http-client"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 host = { path = "../host" }
+tracing = "0.1.40"

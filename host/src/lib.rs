@@ -24,6 +24,7 @@ use risc0_tm_core::{
 use risc0_zkvm::{
     default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, ProverOpts, Receipt,
 };
+use tracing::instrument;
 use std::ops::Range;
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
@@ -104,6 +105,7 @@ pub async fn prove_block(
 }
 
 /// Fetches and proves a range of light client blocks.
+#[instrument(skip(client), err)]
 pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow::Result<Receipt> {
     let prover = default_prover();
 
@@ -137,6 +139,7 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
 }
 
 /// Post batch proof to Eth based chain.
+#[instrument(skip(contract, receipt), err)]
 pub async fn post_batch<T, P, N>(
     contract: &IBlobstreamInstance<T, P, N>,
     receipt: &Receipt,
@@ -146,6 +149,7 @@ where
     P: Provider<T, N>,
     N: Network,
 {
+    tracing::info!("Posting batch (dev mode={})", is_dev_mode());
     let seal = match is_dev_mode() {
         true => [&[0u8; 4], receipt.claim()?.digest().as_bytes()].concat(),
         false => groth16::encode(receipt.inner.groth16()?.seal.clone())?,
