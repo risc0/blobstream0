@@ -78,15 +78,19 @@ struct DeployArgs {
     #[clap(long)]
     private_key_hex: String,
 
+    /// Address of risc0 verifier to use (either mock or groth16)
     #[clap(long)]
     verifier_address: Option<String>,
 
+    /// Trusted height for contract
     #[clap(long)]
     tm_height: u64,
 
+    /// Trusted block hash for contract
     #[clap(long)]
     tm_block_hash: String,
 
+    /// If deploying verifier, will it deploy the mock verifier
     #[clap(long)]
     dev: bool,
 }
