@@ -27,11 +27,9 @@ impl<T, P, N> BlobstreamService<T, P, N> {
 
 impl<T, P, N> BlobstreamService<T, P, N>
 where
-    T: Transport + Clone + 'static,
+    T: Transport + Clone,
     P: Provider<T, N> + 'static,
-    N: Network + 'static,
-    IBlobstreamInstance<T, P, N>: 'static,
-    Self: 'static,
+    N: Network,
 {
     pub async fn spawn(&self) {
         loop {
@@ -65,7 +63,9 @@ where
             }
 
             // TODO gracefully handle errors
-            let receipt = prove_block_range(&self.tm_client, height..block_target).await.unwrap();
+            let receipt = prove_block_range(&self.tm_client, height..block_target)
+                .await
+                .unwrap();
             post_batch(&self.contract, &receipt).await.unwrap();
 
             // TODO ensure height is updated
