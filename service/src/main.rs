@@ -42,6 +42,10 @@ struct Args {
     /// Hex encoded private key to use for submitting proofs to Ethereum
     #[clap(long)]
     private_key_hex: String,
+
+    /// Number of blocks proved in each batch of block headers
+    #[clap(long)]
+    batch_size: u64,
 }
 
 #[tokio::main]
@@ -55,6 +59,7 @@ async fn main() -> anyhow::Result<()> {
         eth_rpc,
         eth_address,
         private_key_hex,
+        batch_size,
     } = Args::parse();
 
     let tm_client = HttpClient::new(tendermint_rpc.as_str())?;
@@ -70,7 +75,9 @@ async fn main() -> anyhow::Result<()> {
 
     let contract = IBlobstream::new(eth_address, provider);
 
-    let service = BlobstreamService::new(contract, tm_client);
+    BlobstreamService::new(contract, tm_client, batch_size)
+        .spawn()
+        .await;
 
     Ok(())
 }
