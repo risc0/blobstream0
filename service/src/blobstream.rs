@@ -20,6 +20,20 @@ use risc0_tm_core::IBlobstream::IBlobstreamInstance;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::task::JoinError;
 
+macro_rules! handle_temporal_result {
+    ($res:expr, $consecutive_failures:expr) => {
+        match $res {
+            Ok(r) => r,
+            Err(e) => {
+                tracing::warn!("failed to request current state: {}", e);
+                $consecutive_failures += 1;
+                tokio::time::sleep(std::time::Duration::from_secs(15)).await;
+                continue;
+            }
+        }
+    };
+}
+
 pub(crate) struct BlobstreamService<T, P, N> {
     contract: Arc<IBlobstreamInstance<T, P, N>>,
     tm_client: Arc<HttpClient>,
@@ -77,21 +91,14 @@ where
 
     /// Spawn blobstream service, which will run indefinitely until a fatal error when awaited.
     pub async fn spawn(&self) -> anyhow::Result<()> {
-        loop {
+        let mut consecutive_failures = 0;
+        while consecutive_failures < 5 {
             let BlobstreamState {
                 eth_verified_height,
                 tm_height,
                 // TODO check this hash against tm node as sanity check
-                eth_verified_hash: _,
-            } = match self.fetch_current_state().await? {
-                Ok(r) => r,
-                Err(e) => {
-                    // Failed to query state, log a warning and wait to avoid being rate limited
-                    tracing::warn!("failed to request current state: {}", e);
-                    tokio::time::sleep(Duration::from_secs(15)).await;
-                    continue;
-                }
-            };
+                eth_verified_hash: _, 
+            } = handle_temporal_result!(self.fetch_current_state().await?, consecutive_failures);
             tracing::info!(
                 "Contract height: {eth_verified_height}, tendermint height: {tm_height}"
             );
@@ -109,14 +116,21 @@ where
                 continue;
             }
 
-            // TODO gracefully handle errors
-            let receipt = prove_block_range(&self.tm_client, eth_verified_height..block_target)
-                .await
-                .unwrap();
-            post_batch(&self.contract, &receipt).await.unwrap();
+            let receipt = handle_temporal_result!(
+                prove_block_range(&self.tm_client, eth_verified_height..block_target).await,
+                consecutive_failures
+            );
+            handle_temporal_result!(
+                post_batch(&self.contract, &receipt).await,
+                consecutive_failures
+            );
+
+            consecutive_failures = 0;
 
             // TODO ensure height is updated
         }
+
+        anyhow::bail!("Reached limit of consecutive errors");
     }
 }
 
