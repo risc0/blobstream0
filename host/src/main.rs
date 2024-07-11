@@ -29,7 +29,8 @@ use host::prove_block_range;
 use risc0_tm_core::IBlobstream;
 use tendermint_rpc::HttpClient;
 use tokio::fs;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::fmt::format;
+use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 // TODO elsewhere if keeping dev mode deploy through CLI
 sol!(
@@ -110,6 +111,7 @@ struct DeployArgs {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
+        .event_format(format().compact())
         .with_span_events(FmtSpan::CLOSE)
         .with_env_filter(EnvFilter::from_default_env())
         .init();
