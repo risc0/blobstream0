@@ -1,4 +1,6 @@
-## Running service
+## Running the Blobstream Zero Service
+
+This service will watch the Ethereum contract for the current head of the verified chain, request light client blocks from a Tendermint node, generate a batch proof, and then post that proof back to the Ethereum contract.
 
 ### Local testing
 
