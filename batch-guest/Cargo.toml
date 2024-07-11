@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [build-dependencies]
-risc0-build = { version = "1.0.1" }
+risc0-build = { version = "=1.0.1" }
 risc0-build-ethereum = { git = "https://github.com/risc0/risc0-ethereum", tag = "v1.0.0" }
 
 # Currently just used to format built artifact

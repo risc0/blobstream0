@@ -12,76 +12,159 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use abi::IBlobstream::DataRootTuple;
+use alloy::{network::Network, primitives::TxHash, providers::Provider, transports::Transport};
 use alloy_sol_types::SolValue;
-use serde::{Deserialize, Serialize};
-use sha2::Sha256;
-use tendermint::merkle::simple_hash_from_byte_vectors;
+use batch_guest::BATCH_GUEST_ELF;
+use blobstream0_primitives::{
+    IBlobstream::{IBlobstreamInstance, RangeCommitment},
+    LightClientCommit,
+};
+use light_client_guest::TM_LIGHT_CLIENT_ELF;
+use risc0_ethereum_contracts::groth16;
+use risc0_zkvm::{
+    default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, ProverOpts, Receipt,
+};
+use std::ops::Range;
+use tendermint::{block::Height, node::Id, validator::Set};
+use tendermint_light_client_verifier::types::LightBlock;
+use tendermint_rpc::{Client, HttpClient, Paging};
+use tracing::{instrument, Level};
 
-mod abi {
-    use alloy_sol_types::sol;
+async fn fetch_light_block(
+    client: &HttpClient,
+    block_height: Height,
+) -> anyhow::Result<LightBlock> {
+    let commit_response = client.commit(block_height).await?;
+    let signed_header = commit_response.signed_header;
+    let height = signed_header.header.height;
 
-    // TODO have this be built at compile time rather than manually
-    #[cfg(not(target_os = "zkvm"))]
-    sol!(
-        #[derive(Debug)]
-        #[sol(rpc)]
-        IBlobstream,
-        "../contracts/artifacts/Blobstream0.json"
+    // Note: This currently needs to use Paging::All or the hash mismatches.
+    let validator_response = client.validators(height, Paging::All).await?;
+
+    let validators = Set::new(validator_response.validators, None);
+
+    let next_validator_response = client.validators(height.increment(), Paging::All).await?;
+    let next_validators = Set::new(next_validator_response.validators, None);
+
+    Ok(LightBlock::new(
+        signed_header,
+        validators,
+        next_validators,
+        // TODO do we care about this ID?
+        Id::new([0; 20]),
+    ))
+}
+
+/// Contains the receipt and light client block that was proven.
+/// Can be constructed with [`prove_block`].
+pub struct LightBlockProof {
+    receipt: Receipt,
+    light_block: LightBlock,
+}
+
+/// Prove a single block with the trusted light client block and the height to fetch and prove.
+#[instrument(skip(prover, client, previous_block), err, level = Level::TRACE)]
+pub async fn prove_block(
+    prover: &dyn Prover,
+    client: &HttpClient,
+    previous_block: &LightBlock,
+    height: u64,
+) -> anyhow::Result<LightBlockProof> {
+    let next_block = fetch_light_block(&client, Height::try_from(height)?).await?;
+
+    // TODO remove the need to serialize with cbor
+    // TODO a self-describing serialization protocol needs to be used with serde because the
+    //      LightBlock type requires it. Seems like proto would be most stable format, rather than
+    //      one used for RPC.
+    let mut input_serialized = Vec::new();
+    ciborium::into_writer(&(previous_block, &next_block), &mut input_serialized)?;
+
+    let env = ExecutorEnv::builder()
+        .write_slice(&input_serialized)
+        .build()?;
+
+    // Note: must block in place to not have issues with Bonsai blocking client when selected
+    let prove_info = tokio::task::block_in_place(move || prover.prove(env, TM_LIGHT_CLIENT_ELF))?;
+    let receipt = prove_info.receipt;
+
+    let commit: LightClientCommit = receipt.journal.decode()?;
+    assert_eq!(height, commit.next_block_height);
+    assert_eq!(
+        next_block
+            .signed_header
+            .header()
+            .data_hash
+            .unwrap()
+            .as_bytes(),
+        &commit.next_data_root
     );
-    #[cfg(target_os = "zkvm")]
-    sol!(
-        #[derive(Debug)]
-        IBlobstream,
-        "../contracts/artifacts/Blobstream0.json"
-    );
-}
-pub use abi::IBlobstream;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct LightClientCommit {
-    #[serde(with = "serde_bytes")]
-    pub trusted_block_hash: [u8; 32],
-    #[serde(with = "serde_bytes")]
-    pub next_block_hash: [u8; 32],
-    #[serde(with = "serde_bytes")]
-    pub next_data_root: [u8; 32],
-    pub next_block_height: u64,
+    Ok(LightBlockProof {
+        receipt,
+        light_block: next_block,
+    })
 }
 
-/// Type for the leaves in the [MerkleTree].
-pub type MerkleHash = [u8; 32];
+/// Fetches and proves a range of light client blocks.
+#[instrument(skip(client), err, level = Level::TRACE)]
+pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow::Result<Receipt> {
+    let prover = default_prover();
 
-/// Merkle tree implementation for blobstream header proof and validation.
-#[derive(Default)]
-pub struct MerkleTree {
-    inner: Vec<Vec<u8>>,
+    let query_height = Height::try_from(range.start - 1)?;
+    let mut previous_block = fetch_light_block(&client, query_height).await?;
+
+    let mut batch_env_builder = ExecutorEnv::builder();
+    let mut batch_receipts = Vec::new();
+    // TODO(opt): Retrieving light blocks and proving can be parallelized
+    for height in range {
+        // TODO this will likely have to check chain height and wait for new block to be published
+        //      or have a separate function do this.
+        let LightBlockProof {
+            receipt,
+            light_block,
+        } = prove_block(prover.as_ref(), client, &previous_block, height).await?;
+
+        batch_receipts.push(receipt.journal.bytes.clone());
+        batch_env_builder.add_assumption(receipt);
+        previous_block = light_block;
+    }
+
+    let env = batch_env_builder.write(&batch_receipts)?.build()?;
+
+    // Note: must block in place to not have issues with Bonsai blocking client when selected
+    tracing::debug!("Proving batch of blocks");
+    let prove_info = tokio::task::block_in_place(move || {
+        prover.prove_with_opts(env, BATCH_GUEST_ELF, &ProverOpts::groth16())
+    })?;
+
+    Ok(prove_info.receipt)
 }
 
-impl MerkleTree {
-    pub fn push(&mut self, element: &DataRootTuple) {
-        self.push_raw(element.abi_encode());
-    }
+/// Post batch proof to Eth based chain.
+#[instrument(skip(contract, receipt), err, level = Level::TRACE)]
+pub async fn post_batch<T, P, N>(
+    contract: &IBlobstreamInstance<T, P, N>,
+    receipt: &Receipt,
+) -> anyhow::Result<TxHash>
+where
+    T: Transport + Clone,
+    P: Provider<T, N>,
+    N: Network,
+{
+    tracing::info!("Posting batch (dev mode={})", is_dev_mode());
+    let seal = match is_dev_mode() {
+        true => [&[0u8; 4], receipt.claim()?.digest().as_bytes()].concat(),
+        false => groth16::encode(receipt.inner.groth16()?.seal.clone())?,
+    };
 
-    pub fn push_raw(&mut self, bytes: Vec<u8>) {
-        self.inner.push(bytes)
-    }
+    let range_commitment = RangeCommitment::abi_decode(&receipt.journal.bytes, true)?;
 
-    /// Construct new merkle tree from all leaves.
-    pub fn from_leaves<'a>(leaves: impl IntoIterator<Item = &'a DataRootTuple>) -> Self {
-        let mut s = Self::default();
-        for leaf in leaves {
-            s.push(leaf);
-        }
-        s
-    }
+    let res = contract
+        .updateRange(range_commitment, seal.into())
+        .send()
+        .await?
+        .watch()
+        .await?;
 
-    /// Returns merkle root of tree.
-    pub fn root(&mut self) -> MerkleHash {
-        simple_hash_from_byte_vectors::<Sha256>(&self.inner)
-    }
+    Ok(res)
 }
-
-#[derive(thiserror::Error, Debug)]
-#[error("Invalid proof for given root")]
-pub struct VerifyProofError;

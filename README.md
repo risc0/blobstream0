@@ -34,9 +34,9 @@ cargo test
 Run the CLI to generate proofs or post those proofs on an Eth based network:
 
 ```console
-cargo run -p host -- --help
+cargo run -p blobstream0-cli -- --help
 ```
 
-> Note: This CLI as well as other APIs will change in the short term. If you need anything specific from this, [open an issue](https://github.com/risc0/blobstream0/issues/new)!
+For docs on running the Blobstream service, see [usage-guide.md](./usage-guide.md).
 
-For more docs on running the Blobstream service, see [usage-guide.md](./usage-guide.md).
+> Note: This CLI as well as other APIs will change in the short term. If you need anything specific from this, [open an issue](https://github.com/risc0/blobstream0/issues/new)!

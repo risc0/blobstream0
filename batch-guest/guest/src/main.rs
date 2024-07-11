@@ -15,7 +15,7 @@
 use alloy_primitives::U256;
 use alloy_sol_types::SolValue;
 use light_client_guest::TM_LIGHT_CLIENT_ID;
-use risc0_tm_core::{
+use blobstream0_primitives::{
     IBlobstream::{DataRootTuple, RangeCommitment},
     LightClientCommit, MerkleTree,
 };

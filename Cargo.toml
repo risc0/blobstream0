@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["core", "host", "service"]
-default-members = ["host"]
+members = ["cli", "core", "primitives", "service"]
+default-members = ["service"]
 
 [workspace.dependencies]
 tendermint-rpc = "0.37.0"

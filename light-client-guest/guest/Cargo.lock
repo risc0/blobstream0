@@ -762,6 +762,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "blobstream0-primitives"
+version = "0.1.0"
+dependencies = [
+ "alloy-contract",
+ "alloy-sol-types",
+ "serde",
+ "serde_bytes",
+ "sha2",
+ "tendermint",
+ "thiserror",
+]
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2181,19 +2194,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "risc0-tm-core"
-version = "0.1.0"
-dependencies = [
- "alloy-contract",
- "alloy-sol-types",
- "serde",
- "serde_bytes",
- "sha2",
- "tendermint",
- "thiserror",
-]
-
-[[package]]
 name = "risc0-zkp"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2769,8 +2769,8 @@ dependencies = [
 name = "tm-light-client"
 version = "0.1.0"
 dependencies = [
+ "blobstream0-primitives",
  "ciborium",
- "risc0-tm-core",
  "risc0-zkvm",
  "serde",
  "serde_json",

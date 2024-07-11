@@ -21,9 +21,9 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 use alloy_sol_types::sol;
-use host::{post_batch, prove_block_range};
+use blobstream0_core::{post_batch, prove_block_range};
+use blobstream0_primitives::IBlobstream::{self, BinaryMerkleProof, DataRootTuple};
 use reqwest::header;
-use risc0_tm_core::IBlobstream::{self, BinaryMerkleProof, DataRootTuple};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as, DisplayFromStr};
 use tendermint_rpc::HttpClient;

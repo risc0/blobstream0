@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use core::time::Duration;
-use risc0_tm_core::LightClientCommit;
+use blobstream0_primitives::LightClientCommit;
 use risc0_zkvm::guest::env;
 use tendermint::Hash;
 use tendermint_light_client_verifier::{

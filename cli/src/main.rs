@@ -24,9 +24,9 @@ use alloy::{
     signers::local::PrivateKeySigner,
 };
 use alloy_sol_types::sol;
+use blobstream0_core::prove_block_range;
+use blobstream0_primitives::IBlobstream;
 use clap::Parser;
-use host::prove_block_range;
-use risc0_tm_core::IBlobstream;
 use tendermint_rpc::HttpClient;
 use tokio::fs;
 use tracing_subscriber::fmt::format;
