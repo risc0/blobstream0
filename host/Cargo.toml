@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 alloy = { version = "0.1", features = ["node-bindings", "network", "providers", "transports", "signer-local"] }
+alloy-contract = "0.1"
 alloy-sol-types = "0.7"
 anyhow = "1.0"
 batch-guest = { path = "../batch-guest" }
@@ -21,10 +22,10 @@ tendermint = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
+tracing = "0.1.40"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
-alloy-contract = "0.1"
 serde_json = "1.0"
 serde_with = { version = "3.8", features = ["base64"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }

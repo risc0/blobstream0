@@ -2,7 +2,9 @@
     "rust-analyzer.linkedProjects": [
         "./light-client-guest/guest/Cargo.toml",
         "./batch-guest/guest/Cargo.toml",
-        "./host/Cargo.toml"
+        "./host/Cargo.toml",
+        "./core/Cargo.toml",
+        "./service/Cargo.toml"
     ],
     "rust-analyzer.check.extraEnv": {
         "RISC0_SKIP_BUILD": "1",

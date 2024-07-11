@@ -21,11 +21,14 @@ use risc0_tm_core::{
     IBlobstream::{IBlobstreamInstance, RangeCommitment},
     LightClientCommit,
 };
-use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, Receipt};
+use risc0_zkvm::{
+    default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, ProverOpts, Receipt,
+};
 use std::ops::Range;
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
+use tracing::{instrument, Level};
 
 async fn fetch_light_block(
     client: &HttpClient,
@@ -60,6 +63,7 @@ pub struct LightBlockProof {
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
+#[instrument(skip(prover, client, previous_block), err, level = Level::TRACE)]
 pub async fn prove_block(
     prover: &dyn Prover,
     client: &HttpClient,
@@ -102,6 +106,7 @@ pub async fn prove_block(
 }
 
 /// Fetches and proves a range of light client blocks.
+#[instrument(skip(client), err, level = Level::TRACE)]
 pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow::Result<Receipt> {
     let prover = default_prover();
 
@@ -127,12 +132,16 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
     let env = batch_env_builder.write(&batch_receipts)?.build()?;
 
     // Note: must block in place to not have issues with Bonsai blocking client when selected
-    let prove_info = tokio::task::block_in_place(move || prover.prove(env, BATCH_GUEST_ELF))?;
+    tracing::debug!("Proving batch of blocks");
+    let prove_info = tokio::task::block_in_place(move || {
+        prover.prove_with_opts(env, BATCH_GUEST_ELF, &ProverOpts::groth16())
+    })?;
 
     Ok(prove_info.receipt)
 }
 
 /// Post batch proof to Eth based chain.
+#[instrument(skip(contract, receipt), err, level = Level::TRACE)]
 pub async fn post_batch<T, P, N>(
     contract: &IBlobstreamInstance<T, P, N>,
     receipt: &Receipt,
@@ -142,6 +151,7 @@ where
     P: Provider<T, N>,
     N: Network,
 {
+    tracing::info!("Posting batch (dev mode={})", is_dev_mode());
     let seal = match is_dev_mode() {
         true => [&[0u8; 4], receipt.claim()?.digest().as_bytes()].concat(),
         false => groth16::encode(receipt.inner.groth16()?.seal.clone())?,
