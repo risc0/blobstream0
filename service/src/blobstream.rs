@@ -97,7 +97,7 @@ where
                 eth_verified_height,
                 tm_height,
                 // TODO check this hash against tm node as sanity check
-                eth_verified_hash: _, 
+                eth_verified_hash: _,
             } = handle_temporal_result!(self.fetch_current_state().await?, consecutive_failures);
             tracing::info!(
                 "Contract height: {eth_verified_height}, tendermint height: {tm_height}"
