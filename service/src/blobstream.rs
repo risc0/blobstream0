@@ -14,10 +14,11 @@
 
 use std::{sync::Arc, time::Duration};
 
-use alloy::{network::Network, providers::Provider, transports::Transport};
+use alloy::{network::Network, primitives::FixedBytes, providers::Provider, transports::Transport};
 use host::{post_batch, prove_block_range};
 use risc0_tm_core::IBlobstream::IBlobstreamInstance;
 use tendermint_rpc::{Client, HttpClient};
+use tokio::task::JoinError;
 
 pub(crate) struct BlobstreamService<T, P, N> {
     contract: Arc<IBlobstreamInstance<T, P, N>>,
@@ -45,33 +46,60 @@ where
     P: Provider<T, N> + 'static,
     N: Network,
 {
-    pub async fn spawn(&self) {
+    async fn fetch_current_state(&self) -> Result<anyhow::Result<BlobstreamState>, JoinError> {
+        let contract = Arc::clone(&self.contract);
+        let height_task = tokio::spawn(async move { contract.latestHeight().call().await });
+        let contract = Arc::clone(&self.contract);
+        let hash_task = tokio::spawn(async move { contract.latestBlockHash().call().await });
+        let tm_client = Arc::clone(&self.tm_client);
+        let tm_height_task = tokio::spawn(async move {
+            tm_client
+                .status()
+                .await
+                .map(|status| status.sync_info.latest_block_height)
+        });
+
+        let (height, hash, tm_height) = tokio::try_join!(height_task, hash_task, tm_height_task)?;
+
+        let result = || {
+            let height = height?._0;
+            let eth_verified_hash = hash?._0;
+            let tm_height = tm_height?.value();
+            Ok(BlobstreamState {
+                eth_verified_height: height,
+                eth_verified_hash,
+                tm_height,
+            })
+        };
+
+        Ok(result())
+    }
+
+    /// Spawn blobstream service, which will run indefinitely until a fatal error when awaited.
+    pub async fn spawn(&self) -> anyhow::Result<()> {
         loop {
-            let contract = Arc::clone(&self.contract);
-            let height_task = tokio::spawn(async move { contract.latestHeight().call().await });
-            let contract = Arc::clone(&self.contract);
-            let hash_task = tokio::spawn(async move { contract.latestBlockHash().call().await });
-            let tm_client = Arc::clone(&self.tm_client);
-            let tm_height_task = tokio::spawn(async move {
-                tm_client
-                    .status()
-                    .await
-                    .map(|status| status.sync_info.latest_block_height)
-            });
-
-            let (height, hash, tm_height) = tokio::join!(height_task, hash_task, tm_height_task);
-
-            // TODO handle errors gracefully
-            let height = height.unwrap().unwrap()._0;
-            // TODO check this hash against tm node as sanity check
-            let _hash = hash.unwrap().unwrap()._0;
-            let tm_height = tm_height.unwrap().unwrap();
-            tracing::info!("Contract height: {height}, tendermint height: {tm_height}");
+            let BlobstreamState {
+                eth_verified_height,
+                tm_height,
+                // TODO check this hash against tm node as sanity check
+                eth_verified_hash: _,
+            } = match self.fetch_current_state().await? {
+                Ok(r) => r,
+                Err(e) => {
+                    // Failed to query state, log a warning and wait to avoid being rate limited
+                    tracing::warn!("failed to request current state: {}", e);
+                    tokio::time::sleep(Duration::from_secs(15)).await;
+                    continue;
+                }
+            };
+            tracing::info!(
+                "Contract height: {eth_verified_height}, tendermint height: {tm_height}"
+            );
 
             // TODO can prove proactively, this is very basic impl
-            let block_target = height + self.batch_size;
-            if block_target > tm_height.value() {
-                let wait_time = 15 * (block_target - tm_height.value());
+            let block_target = eth_verified_height + self.batch_size;
+            if block_target > tm_height {
+                let wait_time = 15 * (block_target - tm_height);
                 tracing::info!(
                     "Not enough tendermint blocks to create batch, waiting {} seconds",
                     wait_time
@@ -82,7 +110,7 @@ where
             }
 
             // TODO gracefully handle errors
-            let receipt = prove_block_range(&self.tm_client, height..block_target)
+            let receipt = prove_block_range(&self.tm_client, eth_verified_height..block_target)
                 .await
                 .unwrap();
             post_batch(&self.contract, &receipt).await.unwrap();
@@ -90,4 +118,11 @@ where
             // TODO ensure height is updated
         }
     }
+}
+
+struct BlobstreamState {
+    eth_verified_height: u64,
+    #[allow(dead_code)]
+    eth_verified_hash: FixedBytes<32>,
+    tm_height: u64,
 }

@@ -81,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Starting service");
     BlobstreamService::new(contract, tm_client, batch_size)
         .spawn()
-        .await;
+        .await?;
 
     Ok(())
 }
