@@ -28,7 +28,7 @@ use std::ops::Range;
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
-use tracing::instrument;
+use tracing::{instrument, Level};
 
 async fn fetch_light_block(
     client: &HttpClient,
@@ -63,7 +63,7 @@ pub struct LightBlockProof {
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
-#[instrument(skip(prover, client, previous_block))]
+#[instrument(skip(prover, client, previous_block), err, level = Level::TRACE)]
 pub async fn prove_block(
     prover: &dyn Prover,
     client: &HttpClient,
@@ -106,7 +106,7 @@ pub async fn prove_block(
 }
 
 /// Fetches and proves a range of light client blocks.
-#[instrument(skip(client), err)]
+#[instrument(skip(client), err, level = Level::TRACE)]
 pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow::Result<Receipt> {
     let prover = default_prover();
 
@@ -141,7 +141,7 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
 }
 
 /// Post batch proof to Eth based chain.
-#[instrument(skip(contract, receipt), err)]
+#[instrument(skip(contract, receipt), err, level = Level::TRACE)]
 pub async fn post_batch<T, P, N>(
     contract: &IBlobstreamInstance<T, P, N>,
     receipt: &Receipt,
