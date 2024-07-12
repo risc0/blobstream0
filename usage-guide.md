@@ -25,7 +25,7 @@ RISC0_DEV_MODE=true RUST_LOG=host=trace,info cargo run -p service -- --tendermin
 
 Where the `--tendermint-rpc` param can be configured to be any other network endpoint, and the `--batch-size` can be configured.
 
-> Note: The `--eth-address` here is hard coded to be the first deployment when running the first deployment. Either restart the anvil node or update the `--eth-address` parameter to the output from the deploy if making changes to the contract.
+> Note: The `--eth-address` here is hard coded to be the printed address when running the first deployment. Either restart the anvil node or update the `--eth-address` parameter to the output from the deploy if making changes to the contract.
 
 
 #### Local with snark proofs from Bonsai

@@ -15,8 +15,8 @@
 use std::{sync::Arc, time::Duration};
 
 use alloy::{network::Network, primitives::FixedBytes, providers::Provider, transports::Transport};
-use host::{post_batch, prove_block_range};
-use risc0_tm_core::IBlobstream::IBlobstreamInstance;
+use blobstream0_core::{post_batch, prove_block_range};
+use blobstream0_primitives::IBlobstream::IBlobstreamInstance;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::task::JoinError;
 

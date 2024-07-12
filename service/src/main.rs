@@ -17,8 +17,8 @@ use alloy::{
     network::EthereumWallet, primitives::Address, providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
+use blobstream0_primitives::IBlobstream;
 use clap::Parser;
-use risc0_tm_core::IBlobstream;
 use tendermint_rpc::HttpClient;
 use tracing_subscriber::fmt::format;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
