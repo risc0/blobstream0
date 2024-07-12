@@ -4894,6 +4894,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "alloy-contract",
+ "alloy-sol-types",
  "anyhow",
  "blobstream0-core",
  "blobstream0-primitives",
