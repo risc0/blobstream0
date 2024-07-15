@@ -88,5 +88,8 @@ fn main() {
 
     // NOTE: This should not be a circular update, as the code files are not updated with this, just
     //       the built artifact that is pointed to.
-    println!("cargo:rerun-if-changed={}", contracts_dir.display());
+    println!(
+        "cargo:rerun-if-changed={}",
+        contracts_dir.join("src").display()
+    );
 }
