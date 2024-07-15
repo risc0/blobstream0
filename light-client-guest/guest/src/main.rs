@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::time::Duration;
 use blobstream0_primitives::LightClientCommit;
+use core::time::Duration;
 use risc0_zkvm::guest::env;
 use tendermint::Hash;
 use tendermint_light_client_verifier::{
@@ -37,14 +37,20 @@ fn main() {
         clock_drift: Default::default(),
     };
 
-    // Check the next_validators hash, as verify_update_header leaves it for caller to check.
     let trusted_state = light_block_previous.as_trusted_state();
+    let untrusted_state = light_block_next.as_untrusted_state();
+
+    // Assert that the block is the next block after the trusted state.
+    // NOTE: This is only necessary for blobstream to ensure that there are no skipped blocks
+    //       in the batch proof. Otherwise not necessary.
+    assert_eq!(trusted_state.height.increment(), untrusted_state.height());
+
+    // Check the next_validators hash, as verify_update_header leaves it for caller to check.
     assert_eq!(
         trusted_state.next_validators.hash(),
         trusted_state.next_validators_hash
     );
 
-    let untrusted_state = light_block_next.as_untrusted_state();
     // Assert that next validators is provided, such that verify will check it.
     // Note: this is a bit redundant, given converting from LightBlock will always be Some,
     // but this is to be sure the check is always done, even if refactored.
