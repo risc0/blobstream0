@@ -24,6 +24,7 @@ use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{
     default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, ProverOpts, Receipt,
 };
+use serde_bytes::ByteBuf;
 use std::ops::Range;
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
@@ -124,7 +125,7 @@ pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow
             light_block,
         } = prove_block(prover.as_ref(), client, &previous_block, height).await?;
 
-        batch_receipts.push(receipt.journal.bytes.clone());
+        batch_receipts.push(ByteBuf::from(receipt.journal.bytes.clone()));
         batch_env_builder.add_assumption(receipt);
         previous_block = light_block;
     }

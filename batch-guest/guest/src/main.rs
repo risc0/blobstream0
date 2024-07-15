@@ -14,15 +14,16 @@
 
 use alloy_primitives::U256;
 use alloy_sol_types::SolValue;
-use light_client_guest::TM_LIGHT_CLIENT_ID;
 use blobstream0_primitives::{
     IBlobstream::{DataRootTuple, RangeCommitment},
     LightClientCommit, MerkleTree,
 };
+use light_client_guest::TM_LIGHT_CLIENT_ID;
 use risc0_zkvm::{guest::env, serde::from_slice};
+use serde_bytes::ByteBuf;
 
-// TODO by default this will serialize poorly, optimize
-type JournalBytes = Vec<u8>;
+/// Alias to represent the bytes from the journals being recursively proven.
+type JournalBytes = ByteBuf;
 
 fn main() {
     // Input the vector of proofs to batch.

@@ -18,3 +18,4 @@ tendermint-light-client-verifier = { workspace = true }
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
 tracing = "0.1.40"
+serde_bytes = "0.11"
