@@ -730,6 +730,7 @@ dependencies = [
  "blobstream0-primitives",
  "light-client-guest",
  "risc0-zkvm",
+ "serde_bytes",
 ]
 
 [[package]]

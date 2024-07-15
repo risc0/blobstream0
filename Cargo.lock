@@ -1056,6 +1056,7 @@ dependencies = [
  "light-client-guest",
  "risc0-ethereum-contracts",
  "risc0-zkvm",
+ "serde_bytes",
  "tendermint",
  "tendermint-light-client-verifier",
  "tendermint-rpc",
