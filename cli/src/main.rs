@@ -125,9 +125,9 @@ async fn main() -> anyhow::Result<()> {
                 out,
             } = range;
 
-            let client = HttpClient::new(tendermint_rpc.as_str())?;
+            let client = Arc::new(HttpClient::new(tendermint_rpc.as_str())?);
 
-            let receipt = prove_block_range(&client, start..end).await?;
+            let receipt = prove_block_range(client, start..end).await?;
 
             fs::write(out, bincode::serialize(&receipt)?).await?;
         }

@@ -21,7 +21,6 @@ use tendermint::merkle::simple_hash_from_byte_vectors;
 mod abi {
     use alloy_sol_types::sol;
 
-    // TODO have this be built at compile time rather than manually
     #[cfg(not(target_os = "zkvm"))]
     sol!(
         #[derive(Debug)]
@@ -81,7 +80,3 @@ impl MerkleTree {
         simple_hash_from_byte_vectors::<Sha256>(&self.inner)
     }
 }
-
-#[derive(thiserror::Error, Debug)]
-#[error("Invalid proof for given root")]
-pub struct VerifyProofError;

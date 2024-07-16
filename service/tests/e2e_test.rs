@@ -26,6 +26,7 @@ use blobstream0_primitives::IBlobstream::{self, BinaryMerkleProof, DataRootTuple
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as, DisplayFromStr};
+use std::sync::Arc;
 use tendermint_rpc::HttpClient;
 
 sol!(
@@ -90,9 +91,9 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     )
     .await?;
 
-    let client = HttpClient::new(CELESTIA_RPC_URL)?;
+    let client = Arc::new(HttpClient::new(CELESTIA_RPC_URL)?);
 
-    let receipt = prove_block_range(&client, BATCH_START..BATCH_END).await?;
+    let receipt = prove_block_range(client, BATCH_START..BATCH_END).await?;
 
     post_batch(&contract, &receipt).await?;
 

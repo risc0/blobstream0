@@ -14,6 +14,7 @@
 
 use alloy::{network::Network, primitives::TxHash, providers::Provider, transports::Transport};
 use alloy_sol_types::SolValue;
+use anyhow::Context;
 use batch_guest::BATCH_GUEST_ELF;
 use blobstream0_primitives::{
     IBlobstream::{IBlobstreamInstance, RangeCommitment},
@@ -25,11 +26,15 @@ use risc0_zkvm::{
     default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, ProverOpts, Receipt,
 };
 use serde_bytes::ByteBuf;
-use std::ops::Range;
+use std::{ops::Range, sync::Arc};
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
+use tokio::{sync::Semaphore, task::JoinHandle};
 use tracing::{instrument, Level};
+
+mod light_block_range;
+use light_block_range::{LightBlockProveData, LightBlockRangeIterator};
 
 async fn fetch_light_block(
     client: &HttpClient,
@@ -56,42 +61,66 @@ async fn fetch_light_block(
     ))
 }
 
-/// Contains the receipt and light client block that was proven.
-/// Can be constructed with [`prove_block`].
-pub struct LightBlockProof {
-    receipt: Receipt,
-    light_block: LightBlock,
+/// Fetch all light client blocks necessary to prove a given range.
+pub async fn fetch_light_blocks(
+    client: Arc<HttpClient>,
+    range: Range<u64>,
+) -> anyhow::Result<Vec<LightBlock>> {
+    let mut all_blocks = Vec::with_capacity(range.end.saturating_sub(range.start) as usize);
+
+    // Define maximum number of parallel requests.
+    let semaphore = Arc::new(Semaphore::new(10));
+    let mut jhs = Vec::new();
+    for height in range {
+        let semaphore = semaphore.clone();
+        let client = client.clone();
+        let jh: JoinHandle<anyhow::Result<_>> = tokio::spawn(async move {
+            let _permit = semaphore.acquire().await?;
+            let response = fetch_light_block(&client, Height::try_from(height)?).await?;
+            drop(_permit);
+
+            Ok(response)
+        });
+        jhs.push(jh);
+    }
+    // Collect responses from tasks.
+    for jh in jhs {
+        let response = jh.await??;
+        all_blocks.push(response);
+    }
+
+    Ok(all_blocks)
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
-#[instrument(skip(prover, client, previous_block), err, level = Level::TRACE)]
+#[instrument(skip(prover, input), fields(target_height = input.target_height(), trusted_height = input.trusted_height()), err, level = Level::TRACE)]
 pub async fn prove_block(
     prover: &dyn Prover,
-    client: &HttpClient,
-    previous_block: &LightBlock,
-    height: u64,
-) -> anyhow::Result<LightBlockProof> {
-    let next_block = fetch_light_block(&client, Height::try_from(height)?).await?;
-
+    input: LightBlockProveData,
+) -> anyhow::Result<Receipt> {
     // TODO remove the need to serialize with cbor
     // TODO a self-describing serialization protocol needs to be used with serde because the
     //      LightBlock type requires it. Seems like proto would be most stable format, rather than
     //      one used for RPC.
     let mut input_serialized = Vec::new();
-    ciborium::into_writer(&(previous_block, &next_block), &mut input_serialized)?;
+    ciborium::into_writer(&input, &mut input_serialized)?;
 
     let env = ExecutorEnv::builder()
         .write_slice(&input_serialized)
         .build()?;
 
+    tracing::info!("proving light client");
     // Note: must block in place to not have issues with Bonsai blocking client when selected
+    // TODO switch to spawn blocking to avoid starving executor.
     let prove_info = tokio::task::block_in_place(move || prover.prove(env, TM_LIGHT_CLIENT_ELF))?;
     let receipt = prove_info.receipt;
 
     let commit: LightClientCommit = receipt.journal.decode()?;
-    assert_eq!(height, commit.next_block_height);
+    debug_assert_eq!(input.target_height(), commit.next_block_height);
+    // Assert that the data root equals what is committed from the proof.
     assert_eq!(
-        next_block
+        input
+            .target_block
             .signed_header
             .header()
             .data_hash
@@ -100,40 +129,44 @@ pub async fn prove_block(
         &commit.next_data_root
     );
 
-    Ok(LightBlockProof {
-        receipt,
-        light_block: next_block,
-    })
+    Ok(receipt)
 }
 
 /// Fetches and proves a range of light client blocks.
 #[instrument(skip(client), err, level = Level::TRACE)]
-pub async fn prove_block_range(client: &HttpClient, range: Range<u64>) -> anyhow::Result<Receipt> {
+pub async fn prove_block_range(
+    client: Arc<HttpClient>,
+    range: Range<u64>,
+) -> anyhow::Result<Receipt> {
     let prover = default_prover();
 
-    let query_height = Height::try_from(range.start - 1)?;
-    let mut previous_block = fetch_light_block(&client, query_height).await?;
+    // Include fetching the trusted light client block from before the range.
+    let light_blocks = fetch_light_blocks(client.clone(), range.start - 1..range.end).await?;
+    let (trusted_block, blocks) = light_blocks
+        .split_first()
+        .context("range cannot be empty")?;
+    let range_iterator = LightBlockRangeIterator {
+        trusted_block,
+        blocks,
+    };
 
     let mut batch_env_builder = ExecutorEnv::builder();
     let mut batch_receipts = Vec::new();
     // TODO(opt): Retrieving light blocks and proving can be parallelized
-    for height in range {
+    for inputs in range_iterator {
         // TODO this will likely have to check chain height and wait for new block to be published
         //      or have a separate function do this.
-        let LightBlockProof {
-            receipt,
-            light_block,
-        } = prove_block(prover.as_ref(), client, &previous_block, height).await?;
+        let receipt = prove_block(prover.as_ref(), inputs).await?;
 
         batch_receipts.push(ByteBuf::from(receipt.journal.bytes.clone()));
         batch_env_builder.add_assumption(receipt);
-        previous_block = light_block;
     }
 
     let env = batch_env_builder.write(&batch_receipts)?.build()?;
 
     // Note: must block in place to not have issues with Bonsai blocking client when selected
     tracing::debug!("Proving batch of blocks");
+    // TODO likely better to move this to a spawn blocking, prover and env types not compat, messy
     let prove_info = tokio::task::block_in_place(move || {
         prover.prove_with_opts(env, BATCH_GUEST_ELF, &ProverOpts::groth16())
     })?;

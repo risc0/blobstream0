@@ -771,6 +771,7 @@ dependencies = [
  "serde_bytes",
  "sha2",
  "tendermint",
+ "tendermint-light-client-verifier",
  "thiserror",
 ]
 
