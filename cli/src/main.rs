@@ -14,8 +14,7 @@
 
 // TODO move to separate CLI crate.
 
-use std::path::PathBuf;
-
+use std::{path::PathBuf, sync::Arc};
 use alloy::{
     hex::FromHex,
     network::EthereumWallet,

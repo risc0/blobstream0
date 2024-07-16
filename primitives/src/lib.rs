@@ -16,7 +16,9 @@ use abi::IBlobstream::DataRootTuple;
 use alloy_sol_types::SolValue;
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
+use std::time::Duration;
 use tendermint::merkle::simple_hash_from_byte_vectors;
+use tendermint_light_client_verifier::{options::Options, types::TrustThreshold};
 
 mod abi {
     use alloy_sol_types::sol;
@@ -36,6 +38,15 @@ mod abi {
     );
 }
 pub use abi::IBlobstream;
+
+pub const DEFAULT_PROVER_OPTS: Options = Options {
+    // Trust threshold overriden to match security used by IBC default
+    // See context https://github.com/informalsystems/hermes/issues/2876
+    trust_threshold: TrustThreshold::TWO_THIRDS,
+    // Two week trusting period (range of which blocks can be validated).
+    trusting_period: Duration::from_secs(1_209_600),
+    clock_drift: Duration::from_secs(0),
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LightClientCommit {

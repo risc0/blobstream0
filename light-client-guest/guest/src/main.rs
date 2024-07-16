@@ -12,15 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use blobstream0_primitives::{LightClientCommit, DEFAULT_PROVER_OPTS};
 use core::time::Duration;
-use blobstream0_primitives::LightClientCommit;
 use risc0_zkvm::guest::env;
 use tendermint::Hash;
-use tendermint_light_client_verifier::{
-    options::Options,
-    types::{LightBlock, TrustThreshold},
-    ProdVerifier, Verdict, Verifier,
-};
+use tendermint_light_client_verifier::{types::LightBlock, ProdVerifier, Verdict, Verifier};
 
 fn main() {
     // TODO this probably wants to be protobuf
@@ -29,14 +25,6 @@ fn main() {
         ciborium::from_reader(env::stdin()).unwrap();
 
     let vp = ProdVerifier::default();
-    let opt = Options {
-        // Trust threshold overriden to match security used by IBC default
-        // See context https://github.com/informalsystems/hermes/issues/2876
-        trust_threshold: TrustThreshold::TWO_THIRDS,
-        // Two week trusting period (range of which blocks can be validated).
-        trusting_period: Duration::from_secs(1_209_600),
-        clock_drift: Default::default(),
-    };
 
     // Check the next_validators hash, as verify_update_header leaves it for caller to check.
     let trusted_state = light_block_previous.as_trusted_state();
@@ -54,8 +42,12 @@ fn main() {
     // This verify time picked pretty arbitrarily, need to be after header time and within
     // trusting window.
     let verify_time = light_block_next.time() + Duration::from_secs(1);
-    let verdict =
-        vp.verify_update_header(untrusted_state, trusted_state, &opt, verify_time.unwrap());
+    let verdict = vp.verify_update_header(
+        untrusted_state,
+        trusted_state,
+        &DEFAULT_PROVER_OPTS,
+        verify_time.unwrap(),
+    );
 
     assert!(
         matches!(verdict, Verdict::Success),
