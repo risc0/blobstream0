@@ -42,6 +42,15 @@ Where the `--tendermint-rpc` param can be configured to be any other network end
 
 The flow is similar to above, except that the `--dev` flag is removed from the deployment, to deploy the groth16 verifier in its place for that step:
 
+Set the Bonsai env variables with the url and API key:
+
+```console
+export BONSAI_API_KEY=<YOUR_API_KEY>
+export BONSAI_API_URL=<BONSAI_URL>
+```
+
+> Note: you can instead use local proving and not set these env variables if on an x86 machine. See more https://dev.risczero.com/api/next/generating-proofs/proving-options
+
 ```
 RUST_LOG=info cargo run -p blobstream0-cli -- deploy \
 	--eth-rpc http://127.0.0.1:8545 \
