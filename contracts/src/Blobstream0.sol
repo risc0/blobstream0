@@ -91,6 +91,13 @@ contract Blobstream0 is IDAOracle {
         bytes memory journal = abi.encode(_commit);
         verifier.verify(_seal, imageId, sha256(journal));
 
+        emit DataCommitmentStored(
+            proofNonce,
+            latestHeight,
+            _commit.newHeight,
+            _commit.merkleRoot
+        );
+
         // Update latest block in state
         // TODO explore abstracting this away when gas measured (safety).
         latestHeight = _commit.newHeight;
