@@ -25,8 +25,12 @@ macro_rules! handle_temporal_result {
         match $res {
             Ok(r) => r,
             Err(e) => {
-                tracing::warn!("failed to request current state: {}", e);
                 $consecutive_failures += 1;
+                tracing::warn!(
+                    "failed to request current state: {} (consecutive: {})",
+                    e,
+                    $consecutive_failures
+                );
                 tokio::time::sleep(std::time::Duration::from_secs(15)).await;
                 continue;
             }
