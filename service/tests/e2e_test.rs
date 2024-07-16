@@ -86,7 +86,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
         FixedBytes::<32>::from_hex(
             "5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B",
         )?,
-        BATCH_START,
+        BATCH_START - 1,
     )
     .await?;
 

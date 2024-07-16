@@ -104,7 +104,8 @@ where
             );
 
             // TODO can prove proactively, this is very basic impl
-            let block_target = eth_verified_height + self.batch_size;
+            let range_start = eth_verified_height + 1;
+            let block_target = range_start + self.batch_size;
             if block_target > tm_height {
                 let wait_time = 15 * (block_target - tm_height);
                 tracing::info!(
@@ -117,7 +118,7 @@ where
             }
 
             let receipt = handle_temporal_result!(
-                prove_block_range(&self.tm_client, eth_verified_height..block_target).await,
+                prove_block_range(&self.tm_client, range_start..block_target).await,
                 consecutive_failures
             );
             handle_temporal_result!(
