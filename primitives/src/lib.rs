@@ -41,7 +41,7 @@ mod abi {
 pub use abi::IBlobstream;
 
 mod light_block_range;
-pub use light_block_range::{LightBlockProveData, LightBlockRangeIterator};
+pub use light_block_range::LightBlockProveData;
 
 pub const DEFAULT_PROVER_OPTS: Options = Options {
     // Trust threshold overriden to match security used by IBC default

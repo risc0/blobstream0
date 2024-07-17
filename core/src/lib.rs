@@ -18,7 +18,7 @@ use anyhow::Context;
 use batch_guest::BATCH_GUEST_ELF;
 use blobstream0_primitives::{
     IBlobstream::{IBlobstreamInstance, RangeCommitment},
-    LightBlockProveData, LightBlockRangeIterator, LightClientCommit,
+    LightBlockProveData, LightClientCommit,
 };
 use light_client_guest::TM_LIGHT_CLIENT_ELF;
 use risc0_ethereum_contracts::groth16;
@@ -32,6 +32,9 @@ use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
 use tokio::{sync::Semaphore, task::JoinHandle};
 use tracing::{instrument, Level};
+
+mod range_iterator;
+use range_iterator::LightBlockRangeIterator;
 
 async fn fetch_light_block(
     client: &HttpClient,
