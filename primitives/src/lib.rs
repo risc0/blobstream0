@@ -39,6 +39,9 @@ mod abi {
 }
 pub use abi::IBlobstream;
 
+mod light_block_range;
+pub use light_block_range::{LightBlockProveData, LightBlockRangeIterator};
+
 pub const DEFAULT_PROVER_OPTS: Options = Options {
     // Trust threshold overriden to match security used by IBC default
     // See context https://github.com/informalsystems/hermes/issues/2876
@@ -50,14 +53,13 @@ pub const DEFAULT_PROVER_OPTS: Options = Options {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LightClientCommit {
-    #[serde(with = "serde_bytes")]
-    pub trusted_block_hash: [u8; 32],
-    #[serde(with = "serde_bytes")]
-    pub next_block_hash: [u8; 32],
-    #[serde(with = "serde_bytes")]
-    pub next_data_root: [u8; 32],
-    pub next_block_height: u64,
+    pub trusted_block_hash: CompactHash,
+    pub next_block_hash: CompactHash,
+    pub data_roots: Vec<(u64, CompactHash)>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub struct CompactHash(#[serde(with = "serde_bytes")] pub [u8; 32]);
 
 /// Type for the leaves in the [MerkleTree].
 pub type MerkleHash = [u8; 32];

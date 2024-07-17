@@ -1,11 +1,31 @@
-use blobstream0_primitives::DEFAULT_PROVER_OPTS;
+use crate::DEFAULT_PROVER_OPTS;
 use serde_tuple::{Deserialize_tuple, Serialize_tuple};
 use tendermint_light_client_verifier::{
     types::{Header, LightBlock},
     ProdVerifier, Verdict,
 };
 
-pub(crate) struct LightBlockRangeIterator<'a> {
+/// Inputs for light client block proving for Blobstream. Serialized as tuple for more compact form.
+#[derive(Serialize_tuple, Deserialize_tuple)]
+pub struct LightBlockProveData {
+    pub trusted_block: LightBlock,
+    pub interval_headers: Vec<Header>,
+    pub untrusted_block: LightBlock,
+}
+
+impl LightBlockProveData {
+    /// Height of the block to prove to.
+    pub fn target_height(&self) -> u64 {
+        self.untrusted_block.signed_header.header.height.value()
+    }
+
+    /// Trusted height for the starting point of the proof.
+    pub fn trusted_height(&self) -> u64 {
+        self.trusted_block.signed_header.header.height.value()
+    }
+}
+
+pub struct LightBlockRangeIterator<'a> {
     pub trusted_block: &'a LightBlock,
     pub blocks: &'a [LightBlock],
 }
@@ -51,26 +71,6 @@ fn validator_stake_overlap(trusted: &LightBlock, target: &LightBlock) -> bool {
     matches!(verdict, Verdict::Success)
 }
 
-/// Inputs for light client block proving for Blobstream. Serialized as tuple for more compact form.
-#[derive(Serialize_tuple, Deserialize_tuple)]
-pub(crate) struct LightBlockProveData {
-    pub trusted_block: LightBlock,
-    pub interval_headers: Vec<Header>,
-    pub target_block: LightBlock,
-}
-
-impl LightBlockProveData {
-    /// Height of the block to prove to.
-    pub fn target_height(&self) -> u64 {
-        self.target_block.signed_header.header.height.value()
-    }
-
-    /// Trusted height for the starting point of the proof.
-    pub fn trusted_height(&self) -> u64 {
-        self.trusted_block.signed_header.header.height.value()
-    }
-}
-
 impl Iterator for LightBlockRangeIterator<'_> {
     // Note: this could be optimized to avoid clones/ownership, not worth the optimization for
     // 		 the host yet though.
@@ -79,12 +79,18 @@ impl Iterator for LightBlockRangeIterator<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         // TODO double check the options can't be hit, likely irrecoverable in those cases
         let block_idx = self.last_valid_idx()?;
-        let (prove_range, next_range) = self.blocks.split_at(block_idx);
+        let (prove_range, next_range) = self.blocks.split_at(block_idx + 1);
         let (target_block, header_blocks) = prove_range.split_last()?;
         let interval_headers = header_blocks
             .iter()
             .map(|h| h.signed_header.header.clone())
             .collect();
+
+        let data = LightBlockProveData {
+            trusted_block: self.trusted_block.clone(),
+            interval_headers,
+            untrusted_block: target_block.clone(),
+        };
 
         // Update iterator state to use target as trusted, and remove proven range of blocks
         *self = LightBlockRangeIterator {
@@ -92,10 +98,6 @@ impl Iterator for LightBlockRangeIterator<'_> {
             blocks: next_range,
         };
 
-        Some(LightBlockProveData {
-            trusted_block: self.trusted_block.clone(),
-            interval_headers,
-            target_block: target_block.clone(),
-        })
+        Some(data)
     }
 }

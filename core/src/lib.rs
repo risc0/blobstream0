@@ -18,7 +18,7 @@ use anyhow::Context;
 use batch_guest::BATCH_GUEST_ELF;
 use blobstream0_primitives::{
     IBlobstream::{IBlobstreamInstance, RangeCommitment},
-    LightClientCommit,
+    LightBlockProveData, LightBlockRangeIterator, LightClientCommit,
 };
 use light_client_guest::TM_LIGHT_CLIENT_ELF;
 use risc0_ethereum_contracts::groth16;
@@ -32,9 +32,6 @@ use tendermint_light_client_verifier::types::LightBlock;
 use tendermint_rpc::{Client, HttpClient, Paging};
 use tokio::{sync::Semaphore, task::JoinHandle};
 use tracing::{instrument, Level};
-
-mod light_block_range;
-use light_block_range::{LightBlockProveData, LightBlockRangeIterator};
 
 async fn fetch_light_block(
     client: &HttpClient,
@@ -116,17 +113,15 @@ pub async fn prove_block(
     let receipt = prove_info.receipt;
 
     let commit: LightClientCommit = receipt.journal.decode()?;
-    debug_assert_eq!(input.target_height(), commit.next_block_height);
     // Assert that the data root equals what is committed from the proof.
     assert_eq!(
         input
-            .target_block
+            .untrusted_block
             .signed_header
             .header()
-            .data_hash
-            .unwrap()
+            .hash()
             .as_bytes(),
-        &commit.next_data_root
+        &commit.next_block_hash.0
     );
 
     Ok(receipt)
