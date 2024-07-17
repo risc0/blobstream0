@@ -22,9 +22,7 @@ use blobstream0_primitives::{
 };
 use light_client_guest::TM_LIGHT_CLIENT_ELF;
 use risc0_ethereum_contracts::groth16;
-use risc0_zkvm::{
-    default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, Prover, ProverOpts, Receipt,
-};
+use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, ProverOpts, Receipt};
 use serde_bytes::ByteBuf;
 use std::{ops::Range, sync::Arc};
 use tendermint::{block::Height, node::Id, validator::Set};
@@ -93,11 +91,8 @@ pub async fn fetch_light_blocks(
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
-#[instrument(skip(prover, input), fields(target_height = input.target_height(), trusted_height = input.trusted_height()), err, level = Level::TRACE)]
-pub async fn prove_block(
-    prover: &dyn Prover,
-    input: LightBlockProveData,
-) -> anyhow::Result<Receipt> {
+#[instrument(skip(input), fields(target_height = input.target_height(), trusted_height = input.trusted_height()), err, level = Level::TRACE)]
+pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> {
     // TODO remove the need to serialize with cbor
     // TODO a self-describing serialization protocol needs to be used with serde because the
     //      LightBlock type requires it. Seems like proto would be most stable format, rather than
@@ -105,14 +100,17 @@ pub async fn prove_block(
     let mut input_serialized = Vec::new();
     ciborium::into_writer(&input, &mut input_serialized)?;
 
-    let env = ExecutorEnv::builder()
-        .write_slice(&input_serialized)
-        .build()?;
-
     tracing::info!("proving light client");
-    // Note: must block in place to not have issues with Bonsai blocking client when selected
-    // TODO switch to spawn blocking to avoid starving executor.
-    let prove_info = tokio::task::block_in_place(move || prover.prove(env, TM_LIGHT_CLIENT_ELF))?;
+    // Note: must be in blocking context to not have issues with Bonsai blocking client when selected
+    let prove_info = tokio::task::spawn_blocking(move || {
+        let env = ExecutorEnv::builder()
+            .write_slice(&input_serialized)
+            .build()?;
+
+        let prover = default_prover();
+        prover.prove(env, TM_LIGHT_CLIENT_ELF)
+    })
+    .await??;
     let receipt = prove_info.receipt;
 
     let commit: LightClientCommit = receipt.journal.decode()?;
@@ -154,7 +152,7 @@ pub async fn prove_block_range(
     for inputs in range_iterator {
         // TODO this will likely have to check chain height and wait for new block to be published
         //      or have a separate function do this.
-        let receipt = prove_block(prover.as_ref(), inputs).await?;
+        let receipt = prove_block(inputs).await?;
 
         batch_receipts.push(ByteBuf::from(receipt.journal.bytes.clone()));
         batch_env_builder.add_assumption(receipt);
