@@ -37,10 +37,7 @@ fn main() {
         let commit: LightClientCommit = from_slice(&journal).unwrap();
         if let Some(prev_verified) = last_verified.as_ref() {
             // Assert that the previous block commitment equals the next.
-            assert_eq!(
-                &commit.trusted_block_hash.0,
-                &prev_verified.next_block_hash.0
-            );
+            assert_eq!(&commit.trusted_block_hash, &prev_verified.next_block_hash);
         } else {
             trusted_header_hash = Some(commit.trusted_block_hash);
         }
@@ -50,7 +47,7 @@ fn main() {
             //      ideally this just generates hash and drops any intermediate value. (minor opt)
             merkle_tree.push(&DataRootTuple {
                 height: U256::from(*height),
-                dataRoot: data_root.0.into(),
+                dataRoot: data_root.into(),
             });
         }
 
@@ -62,10 +59,9 @@ fn main() {
     let commit = RangeCommitment {
         trustedHeaderHash: trusted_header_hash
             .expect("must be at least one verified block")
-            .0
             .into(),
         newHeight: latest_block.data_roots.last().unwrap().0,
-        newHeaderHash: latest_block.next_block_hash.0.into(),
+        newHeaderHash: latest_block.next_block_hash.into(),
         merkleRoot: merkle_tree.root().into(),
     };
     env::commit_slice(commit.abi_encode().as_slice());

@@ -7,6 +7,7 @@ edition = "2021"
 alloy-sol-types = { version = "0.7", features = ["json"] }
 serde = { workspace = true }
 serde_bytes = "0.11"
+serde_with = "1.10.0"
 serde_tuple = "0.5"
 sha2 = { workspace = true }
 tendermint = { workspace = true }

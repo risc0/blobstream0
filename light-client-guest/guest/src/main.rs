@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use blobstream0_primitives::{
-    CompactHash, LightBlockProveData, LightClientCommit, DEFAULT_PROVER_OPTS,
-};
+use blobstream0_primitives::{LightBlockProveData, LightClientCommit, DEFAULT_PROVER_OPTS};
 use core::time::Duration;
 use risc0_zkvm::guest::env;
 use std::iter;
@@ -28,7 +26,7 @@ fn collect_data_roots(
     trusted_block: &LightBlock,
     interval_headers: &[Header],
     untrusted_block: &LightBlock,
-) -> Vec<(u64, CompactHash)> {
+) -> Vec<(u64, [u8; 32])> {
     let trusted_header = trusted_block.signed_header.header();
     let untrusted_header = untrusted_block.signed_header.header();
     let mut previous = trusted_header;
@@ -108,16 +106,16 @@ fn main() {
     });
 }
 
-fn expect_block_hash(block: &LightBlock) -> CompactHash {
+fn expect_block_hash(block: &LightBlock) -> [u8; 32] {
     let Hash::Sha256(first_block_hash) = block.signed_header.header().hash() else {
         unreachable!("Header hash should always be a non empty sha256");
     };
-    CompactHash(first_block_hash)
+    first_block_hash
 }
 
-fn expect_sha256_data_hash(header: &Header) -> CompactHash {
+fn expect_sha256_data_hash(header: &Header) -> [u8; 32] {
     let Some(Hash::Sha256(first_block_hash)) = header.data_hash else {
         unreachable!("Header data root should always be a non empty sha256");
     };
-    CompactHash(first_block_hash)
+    first_block_hash
 }

@@ -19,5 +19,5 @@
 pragma solidity ^0.8.20;
 
 library ImageID {
-    bytes32 public constant BATCH_GUEST_ID = bytes32(0x43c83c889f67402a0419003c3abc1bb7647c1b1d84f5533be9346d168a69ac7e);
+    bytes32 public constant BATCH_GUEST_ID = bytes32(0xd5dbf501c3de19dde3bcedbac26933049bc7d3d48308f833c5de62fb2cba7767);
 }

@@ -15,6 +15,7 @@
 use abi::IBlobstream::DataRootTuple;
 use alloy_sol_types::SolValue;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, Bytes};
 use sha2::Sha256;
 use std::time::Duration;
 use tendermint::merkle::simple_hash_from_byte_vectors;
@@ -51,11 +52,15 @@ pub const DEFAULT_PROVER_OPTS: Options = Options {
     clock_drift: Duration::from_secs(0),
 };
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LightClientCommit {
-    pub trusted_block_hash: CompactHash,
-    pub next_block_hash: CompactHash,
-    pub data_roots: Vec<(u64, CompactHash)>,
+    #[serde_as(as = "Bytes")]
+    pub trusted_block_hash: [u8; 32],
+    #[serde_as(as = "Bytes")]
+    pub next_block_hash: [u8; 32],
+    #[serde_as(as = "Vec<(_, Bytes)>")]
+    pub data_roots: Vec<(u64, [u8; 32])>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]

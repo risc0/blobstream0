@@ -121,7 +121,7 @@ pub async fn prove_block(
             .header()
             .hash()
             .as_bytes(),
-        &commit.next_block_hash.0
+        &commit.next_block_hash
     );
 
     Ok(receipt)
