@@ -14,7 +14,6 @@
 
 // TODO move to separate CLI crate.
 
-use std::{path::PathBuf, sync::Arc};
 use alloy::{
     hex::FromHex,
     network::EthereumWallet,
@@ -26,6 +25,7 @@ use alloy_sol_types::sol;
 use blobstream0_core::prove_block_range;
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
+use std::{path::PathBuf, sync::Arc};
 use tendermint_rpc::HttpClient;
 use tokio::fs;
 use tracing_subscriber::fmt::format;
