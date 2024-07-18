@@ -64,11 +64,18 @@ jobs:
       - name: Install Foundry
         uses: risc0/foundry-toolchain@2fe7e70b520f62368a0e3c464f997df07ede420f
 
-      - name: risczero toolchain install
+      - name: Install rzup
         run: |
-          cargo install cargo-binstall --version '=1.6.9' --locked
-          cargo binstall cargo-risczero --no-confirm --force
-          cargo risczero install
+          curl -L https://risc0-artifacts.s3.us-west-2.amazonaws.com/rzup/rzup -o $HOME/.risc0/bin/rzup
+          chmod +x $HOME/.risc0/bin/rzup
+          echo "export PATH=\$PATH:$HOME/.risc0/bin" >> $HOME/.bashrc
+          source $HOME/.bashrc
+          rzup
+      # - name: risczero toolchain install
+      #   run: |
+      #     cargo install cargo-binstall --version '=1.6.9' --locked
+      #     cargo binstall cargo-risczero --no-confirm --force
+      #     cargo risczero install
         # uses: risc0/risc0-ethereum/.github/actions/cargo-risczero-install@release-1.0
         # with:
         # ref: ${{ env.RISC0_MONOREPO_REF }}
