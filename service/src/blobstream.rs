@@ -122,7 +122,7 @@ where
             }
 
             let receipt = handle_temporal_result!(
-                prove_block_range(&self.tm_client, range_start..block_target).await,
+                prove_block_range(self.tm_client.clone(), range_start..block_target).await,
                 consecutive_failures
             );
             handle_temporal_result!(

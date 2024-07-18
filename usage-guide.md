@@ -30,7 +30,7 @@ RISC0_DEV_MODE=true RUST_LOG=host=trace,info cargo run -p service -- \
 	--eth-rpc http://127.0.0.1:8545/ \
 	--eth-address 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
-	--batch-size 4
+	--batch-size 64
 ```
 
 Where the `--tendermint-rpc` param can be configured to be any other network endpoint, and the `--batch-size` can be configured.

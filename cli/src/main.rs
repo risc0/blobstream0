@@ -14,8 +14,6 @@
 
 // TODO move to separate CLI crate.
 
-use std::path::PathBuf;
-
 use alloy::{
     hex::FromHex,
     network::EthereumWallet,
@@ -27,6 +25,7 @@ use alloy_sol_types::sol;
 use blobstream0_core::prove_block_range;
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
+use std::{path::PathBuf, sync::Arc};
 use tendermint_rpc::HttpClient;
 use tokio::fs;
 use tracing_subscriber::fmt::format;
@@ -125,9 +124,9 @@ async fn main() -> anyhow::Result<()> {
                 out,
             } = range;
 
-            let client = HttpClient::new(tendermint_rpc.as_str())?;
+            let client = Arc::new(HttpClient::new(tendermint_rpc.as_str())?);
 
-            let receipt = prove_block_range(&client, start..end).await?;
+            let receipt = prove_block_range(client, start..end).await?;
 
             fs::write(out, bincode::serialize(&receipt)?).await?;
         }

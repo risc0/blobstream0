@@ -35,23 +35,21 @@ fn main() {
     for journal in input {
         env::verify(TM_LIGHT_CLIENT_ID, &journal).unwrap();
         let commit: LightClientCommit = from_slice(&journal).unwrap();
-        let height = U256::from(commit.next_block_height);
         if let Some(prev_verified) = last_verified.as_ref() {
             // Assert that the previous block commitment equals the next.
             assert_eq!(&commit.trusted_block_hash, &prev_verified.next_block_hash);
-
-            // TODO look into how skipped blocks are handled, will it be a missing height?
-            // TODO perhaps commit the block header's parent hash, to compare to make sure no gaps?
         } else {
             trusted_header_hash = Some(commit.trusted_block_hash);
         }
 
-        // TODO this is a bit inefficient, since we don't need to keep intermediate nodes in heap.
-        //      ideally this just generates hash and drops any intermediate value. (minor opt)
-        merkle_tree.push(&DataRootTuple {
-            height,
-            dataRoot: commit.next_data_root.into(),
-        });
+        for (height, data_root) in &commit.data_roots {
+            // TODO this is a bit inefficient, since we don't need to keep intermediate nodes in heap.
+            //      ideally this just generates hash and drops any intermediate value. (minor opt)
+            merkle_tree.push(&DataRootTuple {
+                height: U256::from(*height),
+                dataRoot: data_root.into(),
+            });
+        }
 
         // Set the most recently validated block, to validate the next against.
         last_verified = Some(commit);
@@ -62,7 +60,7 @@ fn main() {
         trustedHeaderHash: trusted_header_hash
             .expect("must be at least one verified block")
             .into(),
-        newHeight: latest_block.next_block_height,
+        newHeight: latest_block.data_roots.last().unwrap().0,
         newHeaderHash: latest_block.next_block_hash.into(),
         merkleRoot: merkle_tree.root().into(),
     };
