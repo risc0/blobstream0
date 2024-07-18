@@ -111,7 +111,10 @@ where
             let range_start = eth_verified_height + 1;
             let block_target = range_start + self.batch_size;
             if block_target > tm_height {
-                let wait_time = 15 * (block_target - tm_height);
+                // Underestimating wait time, it's cheap to fetch current state.
+                // TODO Make this more sophisticated when
+                //      https://github.com/risc0/blobstream0/issues/19 implemented
+                let wait_time = 10 + (3 * (block_target - tm_height));
                 tracing::info!(
                     "Not enough tendermint blocks to create batch, waiting {} seconds",
                     wait_time

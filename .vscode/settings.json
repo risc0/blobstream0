@@ -7,7 +7,7 @@
         "./primitives/Cargo.toml",
         "./service/Cargo.toml"
     ],
-    "rust-analyzer.check.extraEnv": {
-        "RISC0_SKIP_BUILD": "1",
-    }
+    // "rust-analyzer.check.extraEnv": {
+    //     "RISC0_SKIP_BUILD": "1",
+    // }
 }
