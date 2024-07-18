@@ -92,7 +92,7 @@ pub async fn fetch_light_blocks(
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
-#[instrument(skip(input), fields(target_height = input.target_height(), trusted_height = input.trusted_height()), err, level = Level::TRACE)]
+#[instrument(skip(input), fields(untrusted_height = input.untrusted_height(), trusted_height = input.trusted_height()), err, level = Level::TRACE)]
 pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> {
     // TODO remove the need to serialize with cbor
     // TODO a self-describing serialization protocol needs to be used with serde because the
@@ -154,7 +154,7 @@ pub async fn prove_block_range(
         tracing::info!(
             "proving heights {} to {}",
             inputs.trusted_height(),
-            inputs.target_height()
+            inputs.untrusted_height()
         );
         // TODO this will likely have to check chain height and wait for new block to be published
         //      or have a separate function do this.

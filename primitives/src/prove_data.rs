@@ -27,7 +27,7 @@ pub struct LightBlockProveData {
 
 impl LightBlockProveData {
     /// Height of the block to prove to.
-    pub fn target_height(&self) -> u64 {
+    pub fn untrusted_height(&self) -> u64 {
         self.untrusted_block.signed_header.header.height.value()
     }
 
