@@ -64,6 +64,7 @@ pub async fn fetch_light_blocks(
     client: Arc<HttpClient>,
     range: Range<u64>,
 ) -> anyhow::Result<Vec<LightBlock>> {
+    tracing::debug!("fetching light blocks");
     let mut all_blocks = Vec::with_capacity(range.end.saturating_sub(range.start) as usize);
 
     // Define maximum number of parallel requests.
@@ -137,6 +138,7 @@ pub async fn prove_block_range(
     let prover = default_prover();
 
     // Include fetching the trusted light client block from before the range.
+    // TODO possibly worth chunking this to avoid
     let light_blocks = fetch_light_blocks(client.clone(), range.start - 1..range.end).await?;
     let (trusted_block, blocks) = light_blocks
         .split_first()
@@ -148,8 +150,12 @@ pub async fn prove_block_range(
 
     let mut batch_env_builder = ExecutorEnv::builder();
     let mut batch_receipts = Vec::new();
-    // TODO(opt): Retrieving light blocks and proving can be parallelized
     for inputs in range_iterator {
+        tracing::info!(
+            "proving heights {} to {}",
+            inputs.trusted_height(),
+            inputs.target_height()
+        );
         // TODO this will likely have to check chain height and wait for new block to be published
         //      or have a separate function do this.
         let receipt = prove_block(inputs).await?;

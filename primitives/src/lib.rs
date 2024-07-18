@@ -40,9 +40,10 @@ mod abi {
 }
 pub use abi::IBlobstream;
 
-mod light_block_range;
-pub use light_block_range::LightBlockProveData;
+mod prove_data;
+pub use prove_data::LightBlockProveData;
 
+/// Default options for validating Tendermint light client block transitions.
 pub const DEFAULT_PROVER_OPTS: Options = Options {
     // Trust threshold overriden to match security used by IBC default
     // See context https://github.com/informalsystems/hermes/issues/2876
@@ -62,9 +63,6 @@ pub struct LightClientCommit {
     #[serde_as(as = "Vec<(_, Bytes)>")]
     pub data_roots: Vec<(u64, [u8; 32])>,
 }
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-pub struct CompactHash(#[serde(with = "serde_bytes")] pub [u8; 32]);
 
 /// Type for the leaves in the [MerkleTree].
 pub type MerkleHash = [u8; 32];
