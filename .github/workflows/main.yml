@@ -68,6 +68,7 @@ jobs:
         run: |
           cargo install cargo-binstall --version '=1.6.9' --locked
           cargo binstall cargo-risczero --no-confirm --force
+          cargo risczero install
         # uses: risc0/risc0-ethereum/.github/actions/cargo-risczero-install@release-1.0
         # with:
         # ref: ${{ env.RISC0_MONOREPO_REF }}
