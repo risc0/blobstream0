@@ -67,7 +67,7 @@ jobs:
       - name: risczero toolchain install
         run: |
           curl -L https://risczero.com/install | bash
-          source ${PROFILE}
+          source /home/runner/.bashrc 
           rzup
           # cargo risczero install
         # uses: risc0/risc0-ethereum/.github/actions/cargo-risczero-install@release-1.0
