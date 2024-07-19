@@ -8,7 +8,8 @@ alloy = { version = "0.1", features = ["node-bindings", "network", "providers", 
 anyhow = "1.0"
 blobstream0-core = { path = "../core" }
 blobstream0-primitives = { path = "../primitives" }
-clap = { version = "4.5", features = ["derive"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+dotenv = "0.15"
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
 tracing = "0.1.40"

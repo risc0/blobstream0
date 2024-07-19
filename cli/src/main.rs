@@ -25,6 +25,7 @@ use alloy_sol_types::sol;
 use blobstream0_core::prove_block_range;
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
+use dotenv::dotenv;
 use std::{path::PathBuf, sync::Arc};
 use tendermint_rpc::HttpClient;
 use tokio::fs;
@@ -71,7 +72,7 @@ struct ProveRangeArgs {
     end: u64,
 
     /// The Tendermint RPC URL
-    #[clap(long)]
+    #[clap(long, env)]
     tendermint_rpc: String,
 
     /// Output file path to write serialized receipt to
@@ -83,23 +84,23 @@ struct ProveRangeArgs {
 #[clap(author, version, about, long_about = None)]
 struct DeployArgs {
     /// The Ethereum RPC URL
-    #[clap(long)]
+    #[clap(long, env)]
     eth_rpc: String,
 
     /// Hex encoded private key to use for submitting proofs to Ethereum
-    #[clap(long)]
+    #[clap(long, env)]
     private_key_hex: String,
 
     /// Address of risc0 verifier to use (either mock or groth16)
-    #[clap(long)]
+    #[clap(long, env)]
     verifier_address: Option<String>,
 
     /// Trusted height for contract
-    #[clap(long)]
+    #[clap(long, env)]
     tm_height: u64,
 
     /// Trusted block hash for contract
-    #[clap(long)]
+    #[clap(long, env)]
     tm_block_hash: String,
 
     /// If deploying verifier, will it deploy the mock verifier
@@ -109,6 +110,8 @@ struct DeployArgs {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenv().ok();
+
     tracing_subscriber::fmt()
         .event_format(format().compact())
         .with_span_events(FmtSpan::CLOSE)

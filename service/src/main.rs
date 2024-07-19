@@ -19,6 +19,7 @@ use alloy::{
 };
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
+use dotenv::dotenv;
 use tendermint_rpc::HttpClient;
 use tracing_subscriber::fmt::format;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
@@ -29,28 +30,30 @@ mod blobstream;
 #[clap(author, version, about, long_about = None)]
 struct Args {
     /// The Tendermint RPC URL
-    #[clap(long)]
+    #[clap(long, env)]
     tendermint_rpc: String,
 
     /// The Ethereum RPC URL
-    #[clap(long)]
+    #[clap(long, env)]
     eth_rpc: String,
 
     /// The deployed contract on Ethereum to reference
-    #[clap(long)]
+    #[clap(long, env)]
     eth_address: Address,
 
     /// Hex encoded private key to use for submitting proofs to Ethereum
-    #[clap(long)]
+    #[clap(long, env)]
     private_key_hex: String,
 
     /// Number of blocks proved in each batch of block headers
-    #[clap(long)]
+    #[clap(long, env)]
     batch_size: u64,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenv().ok();
+
     tracing_subscriber::fmt()
         .event_format(format().compact())
         .with_span_events(FmtSpan::CLOSE)
