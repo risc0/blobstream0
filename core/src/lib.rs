@@ -64,7 +64,7 @@ pub async fn fetch_light_blocks(
     client: Arc<HttpClient>,
     range: Range<u64>,
 ) -> anyhow::Result<Vec<LightBlock>> {
-    tracing::debug!("fetching light blocks");
+    tracing::debug!("Fetching light blocks");
     let mut all_blocks = Vec::with_capacity(range.end.saturating_sub(range.start) as usize);
 
     // Define maximum number of parallel requests.
@@ -92,7 +92,7 @@ pub async fn fetch_light_blocks(
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
-#[instrument(skip(input), fields(untrusted_height = input.untrusted_height(), trusted_height = input.trusted_height()), err, level = Level::TRACE)]
+#[instrument(skip(input), fields(light_range = ?input.untrusted_height()..input.trusted_height()), err, level = Level::DEBUG)]
 pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> {
     // TODO remove the need to serialize with cbor
     // TODO a self-describing serialization protocol needs to be used with serde because the
@@ -101,7 +101,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     let mut input_serialized = Vec::new();
     ciborium::into_writer(&input, &mut input_serialized)?;
 
-    tracing::info!("proving light client");
+    tracing::debug!("Proving light client");
     // Note: must be in blocking context to not have issues with Bonsai blocking client when selected
     let prove_info = tokio::task::spawn_blocking(move || {
         let env = ExecutorEnv::builder()
@@ -130,7 +130,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
 }
 
 /// Fetches and proves a range of light client blocks.
-#[instrument(skip(client), err, level = Level::TRACE)]
+#[instrument(skip(client), err, level = Level::INFO)]
 pub async fn prove_block_range(
     client: Arc<HttpClient>,
     range: Range<u64>,
@@ -151,11 +151,6 @@ pub async fn prove_block_range(
     let mut batch_env_builder = ExecutorEnv::builder();
     let mut batch_receipts = Vec::new();
     for inputs in range_iterator {
-        tracing::info!(
-            "proving heights {} to {}",
-            inputs.trusted_height(),
-            inputs.untrusted_height()
-        );
         // TODO this will likely have to check chain height and wait for new block to be published
         //      or have a separate function do this.
         let receipt = prove_block(inputs).await?;
@@ -177,7 +172,7 @@ pub async fn prove_block_range(
 }
 
 /// Post batch proof to Eth based chain.
-#[instrument(skip(contract, receipt), err, level = Level::TRACE)]
+#[instrument(skip(contract, receipt), err, level = Level::DEBUG)]
 pub async fn post_batch<T, P, N>(
     contract: &IBlobstreamInstance<T, P, N>,
     receipt: &Receipt,
@@ -187,7 +182,7 @@ where
     P: Provider<T, N>,
     N: Network,
 {
-    tracing::info!("Posting batch (dev mode={})", is_dev_mode());
+    tracing::debug!("Posting batch (dev mode={})", is_dev_mode());
     let seal = match is_dev_mode() {
         true => [&[0u8; 4], receipt.claim()?.digest().as_bytes()].concat(),
         false => groth16::encode(receipt.inner.groth16()?.seal.clone())?,
