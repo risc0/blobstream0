@@ -56,12 +56,10 @@ fn light_client_verify(trusted_block: &LightBlock, untrusted_block: &LightBlock)
     let untrusted_state = untrusted_block.as_untrusted_state();
 
     // Check the next_validators hash, as verify_update_header leaves it for caller to check.
-    if trusted_state.height.increment() == untrusted_state.height() {
-        assert_eq!(
-            trusted_state.next_validators.hash(),
-            trusted_state.next_validators_hash
-        );
-    }
+    assert_eq!(
+        trusted_state.next_validators.hash(),
+        trusted_state.next_validators_hash
+    );
 
     // Assert that next validators is provided, such that verify will check it.
     // Note: this is a bit redundant, given converting from LightBlock will always be Some,
