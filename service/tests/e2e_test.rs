@@ -98,7 +98,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     post_batch(&contract, &receipt).await?;
 
     let height = contract.latestHeight().call().await?;
-    assert_eq!(height._0, 19);
+    assert_eq!(height._0, BATCH_END - 1);
 
     // Somewhat hacky to do this manually, seems no Rust tooling for this endpoint.
     let http_client = reqwest::Client::new();
