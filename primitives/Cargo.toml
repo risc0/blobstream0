@@ -9,7 +9,6 @@ prost = { version = "0.13", default-features = false }
 prost-types = { version = "0.13", default-features = false }
 serde = { workspace = true }
 serde_bytes = "0.11"
-serde_tuple = "0.5"
 serde_with = { version = "3.9", default-features = false, features = ["macros", "alloc"] }
 sha2 = { workspace = true }
 tendermint = { workspace = true }

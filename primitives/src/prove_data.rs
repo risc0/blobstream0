@@ -14,15 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-use serde_tuple::{Deserialize_tuple, Serialize_tuple};
-use tendermint_light_client_verifier::types::{Header, LightBlock};
+use tendermint_light_client_verifier::types::Header;
+
+use crate::proto::{TrustedLightBlock, UntrustedLightBlock};
 
 /// Inputs for light client block proving for Blobstream. Serialized as tuple for more compact form.
-#[derive(Serialize_tuple, Deserialize_tuple)]
+#[derive(Debug)]
 pub struct LightBlockProveData {
-    pub trusted_block: LightBlock,
+    pub trusted_block: TrustedLightBlock,
     pub interval_headers: Vec<Header>,
-    pub untrusted_block: LightBlock,
+    pub untrusted_block: UntrustedLightBlock,
 }
 
 impl LightBlockProveData {

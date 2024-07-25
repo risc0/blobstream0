@@ -14,7 +14,6 @@
 
 use alloy::{network::Network, primitives::TxHash, providers::Provider, transports::Transport};
 use alloy_sol_types::SolValue;
-use anyhow::Context;
 use batch_guest::BATCH_GUEST_ELF;
 use blobstream0_primitives::{
     proto::{TrustedLightBlock, UntrustedLightBlock},
@@ -26,9 +25,9 @@ use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, ProverOpts, Receipt};
 use serde_bytes::ByteBuf;
 use std::{ops::Range, sync::Arc};
-use tendermint::{block::Height, node::Id, validator::Set};
-use tendermint_light_client_verifier::types::LightBlock;
-use tendermint_proto::{types::Header, Protobuf};
+use tendermint::{block::Height, validator::Set};
+use tendermint_light_client_verifier::types::Header;
+use tendermint_proto::{types::Header as ProtoHeader, Protobuf};
 use tendermint_rpc::{Client, HttpClient, Paging};
 use tokio::{sync::Semaphore, task::JoinHandle};
 use tracing::{instrument, Level};
@@ -36,65 +35,108 @@ use tracing::{instrument, Level};
 mod range_iterator;
 use range_iterator::LightBlockRangeIterator;
 
-async fn fetch_light_block(
-    client: &HttpClient,
-    block_height: Height,
-) -> anyhow::Result<LightBlock> {
-    let commit_response = client.commit(block_height).await?;
-    let signed_header = commit_response.signed_header;
-    let height = signed_header.header.height;
+/// Currently set to the max allowed by tendermint RPC
+const HEADER_REQ_COUNT: u64 = 20;
 
+async fn fetch_validators(client: &HttpClient, block_height: Height) -> anyhow::Result<Set> {
     // Note: This currently needs to use Paging::All or the hash mismatches.
-    let validator_response = client.validators(height, Paging::All).await?;
+    let validator_response = client.validators(block_height, Paging::All).await?;
 
     let validators = Set::new(validator_response.validators, None);
 
-    let next_validator_response = client.validators(height.increment(), Paging::All).await?;
-    let next_validators = Set::new(next_validator_response.validators, None);
+    Ok(validators)
+}
 
-    Ok(LightBlock::new(
+async fn fetch_trusted_light_block(
+    client: &HttpClient,
+    block_height: Height,
+) -> anyhow::Result<TrustedLightBlock> {
+    let commit_response = client.commit(block_height).await?;
+    let signed_header = commit_response.signed_header;
+
+    let next_validators = fetch_validators(client, block_height.increment()).await?;
+
+    Ok(TrustedLightBlock {
+        signed_header,
+        next_validators,
+    })
+}
+
+async fn fetch_untrusted_light_block(
+    client: &HttpClient,
+    block_height: Height,
+) -> anyhow::Result<UntrustedLightBlock> {
+    let commit_response = client.commit(block_height).await?;
+    let signed_header = commit_response.signed_header;
+
+    let validators = fetch_validators(client, block_height).await?;
+
+    Ok(UntrustedLightBlock {
         signed_header,
         validators,
-        next_validators,
-        // TODO do we care about this ID?
-        Id::new([0; 20]),
-    ))
+    })
 }
 
 /// Fetch all light client blocks necessary to prove a given range.
-pub async fn fetch_light_blocks(
+pub async fn fetch_headers(
     client: Arc<HttpClient>,
     range: Range<u64>,
-) -> anyhow::Result<Vec<LightBlock>> {
+) -> anyhow::Result<Vec<Header>> {
     tracing::debug!(target: "blobstream0::core", "Fetching light blocks");
     let mut all_blocks = Vec::with_capacity(range.end.saturating_sub(range.start) as usize);
 
+    let mut curr = range.start;
     // Define maximum number of parallel requests.
-    let semaphore = Arc::new(Semaphore::new(10));
+    let semaphore = Arc::new(Semaphore::new(16));
     let mut jhs = Vec::new();
-    for height in range {
+    while curr < range.end {
         let semaphore = semaphore.clone();
         let client = client.clone();
+        let start_height = curr;
+        curr += HEADER_REQ_COUNT;
+        // Note: range end is inclusive for Tendermint, so end max is decremented.
+        let end_height = std::cmp::min(curr, range.end - 1);
         let jh: JoinHandle<anyhow::Result<_>> = tokio::spawn(async move {
             let _permit = semaphore.acquire().await?;
-            let response = fetch_light_block(&client, Height::try_from(height)?).await?;
+            tracing::debug!(
+                target: "blobstream0::core",
+                "requesting header range {}-{}",
+                start_height, end_height
+            );
+            let response = client
+                .blockchain(
+                    Height::try_from(start_height)?,
+                    Height::try_from(end_height)?,
+                )
+                .await?;
             drop(_permit);
 
-            Ok(response)
+            // Headers are returned in reverse order, reorder
+            let headers: Vec<Header> = response
+                .block_metas
+                .into_iter()
+                .rev()
+                .map(|b| b.header)
+                .collect();
+            Ok(headers)
         });
         jhs.push(jh);
     }
     // Collect responses from tasks.
     for jh in jhs {
         let response = jh.await??;
-        all_blocks.push(response);
+        all_blocks.extend(response);
     }
 
     Ok(all_blocks)
 }
 
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
-#[instrument(target = "blobstream0::core", skip(input), fields(light_range = ?input.untrusted_height()..input.trusted_height()), err, level = Level::DEBUG)]
+#[instrument(
+    target = "blobstream0::core",
+    skip(input),
+    fields(light_range = ?input.untrusted_height()..input.trusted_height()),
+    err, level = Level::DEBUG)]
 pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> {
     let mut buffer = Vec::<u8>::new();
     assert_eq!(
@@ -114,7 +156,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     .encode_length_delimited(&mut buffer)?;
 
     for header in input.interval_headers {
-        Protobuf::<Header>::encode_length_delimited(header, &mut buffer)?;
+        Protobuf::<ProtoHeader>::encode_length_delimited(header, &mut buffer)?;
     }
 
     tracing::debug!(target: "blobstream0::core", "Proving light client");
@@ -144,19 +186,20 @@ pub async fn prove_block_range(
     let prover = default_prover();
 
     // Include fetching the trusted light client block from before the range.
-    // TODO possibly worth chunking this to avoid
-    let light_blocks = fetch_light_blocks(client.clone(), range.start - 1..range.end).await?;
-    let (trusted_block, blocks) = light_blocks
-        .split_first()
-        .context("range cannot be empty")?;
-    let range_iterator = LightBlockRangeIterator {
+    let (trusted_block, blocks) = tokio::try_join!(
+        fetch_trusted_light_block(&client, Height::try_from(range.start - 1)?),
+        fetch_headers(client.clone(), range.start..range.end)
+    )?;
+
+    let mut range_iterator = LightBlockRangeIterator {
+        client: &client,
         trusted_block,
-        blocks,
+        blocks: &blocks,
     };
 
     let mut batch_env_builder = ExecutorEnv::builder();
     let mut batch_receipts = Vec::new();
-    for inputs in range_iterator {
+    while let Some(inputs) = range_iterator.next_range().await? {
         // TODO this will likely have to check chain height and wait for new block to be published
         //      or have a separate function do this.
         let receipt = prove_block(inputs).await?;

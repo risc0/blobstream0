@@ -8,7 +8,7 @@ use tendermint_light_client_verifier::types::{
 };
 use tendermint_proto::{types::LightBlock as ProtoLightBlock, Protobuf};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TrustedLightBlock {
     pub signed_header: SignedHeader,
     pub next_validators: ValidatorSet,
@@ -56,7 +56,7 @@ impl TrustedLightBlock {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct UntrustedLightBlock {
     pub signed_header: SignedHeader,
     pub validators: ValidatorSet,
