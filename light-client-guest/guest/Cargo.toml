@@ -11,11 +11,13 @@ serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 # TODO this is pulling in ed25519 crate unaccelerated, look into if actually used.
 tendermint = { version = "0.37.0", default-features = false }
+tendermint-proto = { version = "0.37.0", default-features = false }
 tendermint-light-client-verifier = { version = "0.37.0", default-features = false, features = [
 	"rust-crypto",
 ] }
 ciborium = "0.2"
 blobstream0-primitives = { path = "../../primitives" }
+prost = { version = "0.13", default-features = false }
 
 [patch.crates-io]
 sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }

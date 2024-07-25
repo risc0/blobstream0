@@ -17,6 +17,7 @@ use alloy_sol_types::SolValue;
 use anyhow::Context;
 use batch_guest::BATCH_GUEST_ELF;
 use blobstream0_primitives::{
+    proto::{TrustedLightBlock, UntrustedLightBlock},
     IBlobstream::{IBlobstreamInstance, RangeCommitment},
     LightBlockProveData, LightClientCommit,
 };
@@ -27,6 +28,7 @@ use serde_bytes::ByteBuf;
 use std::{ops::Range, sync::Arc};
 use tendermint::{block::Height, node::Id, validator::Set};
 use tendermint_light_client_verifier::types::LightBlock;
+use tendermint_proto::{types::Header, Protobuf};
 use tendermint_rpc::{Client, HttpClient, Paging};
 use tokio::{sync::Semaphore, task::JoinHandle};
 use tracing::{instrument, Level};
@@ -94,19 +96,31 @@ pub async fn fetch_light_blocks(
 /// Prove a single block with the trusted light client block and the height to fetch and prove.
 #[instrument(target = "blobstream0::core", skip(input), fields(light_range = ?input.untrusted_height()..input.trusted_height()), err, level = Level::DEBUG)]
 pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> {
-    // TODO remove the need to serialize with cbor
-    // TODO a self-describing serialization protocol needs to be used with serde because the
-    //      LightBlock type requires it. Seems like proto would be most stable format, rather than
-    //      one used for RPC.
-    let mut input_serialized = Vec::new();
-    ciborium::into_writer(&input, &mut input_serialized)?;
+    let mut buffer = Vec::<u8>::new();
+    assert_eq!(
+        input.untrusted_height() - input.trusted_height() - 1,
+        input.interval_headers.len() as u64
+    );
+    let expected_next_hash = input.untrusted_block.signed_header.header().hash();
+    TrustedLightBlock {
+        signed_header: input.trusted_block.signed_header,
+        next_validators: input.trusted_block.next_validators,
+    }
+    .encode_length_delimited(&mut buffer)?;
+    UntrustedLightBlock {
+        signed_header: input.untrusted_block.signed_header,
+        validators: input.untrusted_block.validators,
+    }
+    .encode_length_delimited(&mut buffer)?;
+
+    for header in input.interval_headers {
+        Protobuf::<Header>::encode_length_delimited(header, &mut buffer)?;
+    }
 
     tracing::debug!(target: "blobstream0::core", "Proving light client");
     // Note: must be in blocking context to not have issues with Bonsai blocking client when selected
     let prove_info = tokio::task::spawn_blocking(move || {
-        let env = ExecutorEnv::builder()
-            .write_slice(&input_serialized)
-            .build()?;
+        let env = ExecutorEnv::builder().write_slice(&buffer).build()?;
 
         let prover = default_prover();
         prover.prove(env, TM_LIGHT_CLIENT_ELF)
@@ -116,15 +130,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
 
     let commit: LightClientCommit = receipt.journal.decode()?;
     // Assert that the data root equals what is committed from the proof.
-    assert_eq!(
-        input
-            .untrusted_block
-            .signed_header
-            .header()
-            .hash()
-            .as_bytes(),
-        &commit.next_block_hash
-    );
+    assert_eq!(expected_next_hash.as_bytes(), &commit.next_block_hash);
 
     Ok(receipt)
 }

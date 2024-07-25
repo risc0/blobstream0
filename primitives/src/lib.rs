@@ -21,6 +21,8 @@ use std::time::Duration;
 use tendermint::merkle::simple_hash_from_byte_vectors;
 use tendermint_light_client_verifier::{options::Options, types::TrustThreshold};
 
+pub mod proto;
+
 mod abi {
     use alloy_sol_types::sol;
 

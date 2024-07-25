@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use blobstream0_primitives::{LightBlockProveData, LightClientCommit, DEFAULT_PROVER_OPTS};
+use blobstream0_primitives::proto::{TrustedLightBlock, UntrustedLightBlock};
+use blobstream0_primitives::{LightClientCommit, DEFAULT_PROVER_OPTS};
 use core::time::Duration;
 use risc0_zkvm::guest::env;
+use std::io::Read;
 use std::iter;
 use tendermint::Hash;
-use tendermint_light_client_verifier::{
-    types::{Header, LightBlock},
-    ProdVerifier, Verdict, Verifier,
-};
+use tendermint_light_client_verifier::{types::Header, ProdVerifier, Verdict, Verifier};
+use tendermint_proto::Protobuf;
 
 fn collect_data_roots(
-    trusted_block: &LightBlock,
+    trusted_block: &TrustedLightBlock,
     interval_headers: &[Header],
-    untrusted_block: &LightBlock,
+    untrusted_block: &UntrustedLightBlock,
 ) -> Vec<(u64, [u8; 32])> {
     let trusted_header = trusted_block.signed_header.header();
     let untrusted_header = untrusted_block.signed_header.header();
@@ -49,7 +49,7 @@ fn collect_data_roots(
     range_data_roots
 }
 
-fn light_client_verify(trusted_block: &LightBlock, untrusted_block: &LightBlock) {
+fn light_client_verify(trusted_block: &TrustedLightBlock, untrusted_block: &UntrustedLightBlock) {
     let vp = ProdVerifier::default();
 
     let trusted_state = trusted_block.as_trusted_state();
@@ -61,14 +61,9 @@ fn light_client_verify(trusted_block: &LightBlock, untrusted_block: &LightBlock)
         trusted_state.next_validators_hash
     );
 
-    // Assert that next validators is provided, such that verify will check it.
-    // Note: this is a bit redundant, given converting from LightBlock will always be Some,
-    // but this is to be sure the check is always done, even if refactored.
-    assert!(untrusted_state.next_validators.is_some());
-
     // This verify time picked pretty arbitrarily, need to be after header time and within
     // trusting window.
-    let verify_time = untrusted_block.time() + Duration::from_secs(1);
+    let verify_time = untrusted_block.signed_header.header().time + Duration::from_secs(1);
     let verdict = vp.verify_update_header(
         untrusted_state,
         trusted_state,
@@ -83,13 +78,43 @@ fn light_client_verify(trusted_block: &LightBlock, untrusted_block: &LightBlock)
     );
 }
 
+// fn framed_read<T, P>(buf: &mut &[u8]) -> T
+// where
+//     T: Protobuf<P>,
+//     P: Message + From<T> + Default,
+// {
+//     let len = prost::encoding::decode_varint(&mut buf).unwrap();
+//     let (message_buf, rest) = buf.split_at(len.try_into().unwrap());
+//     *buf = rest;
+//     T::decode(message_buf).unwrap()
+// }
+
 fn main() {
-    // TODO this probably wants to be protobuf
-    let LightBlockProveData {
-        trusted_block,
-        interval_headers,
-        untrusted_block,
-    } = ciborium::from_reader(env::stdin()).unwrap();
+    // TODO update this to length prefix to avoid reallocs
+    let mut buf = Vec::<u8>::new();
+    env::stdin().read_to_end(&mut buf).unwrap();
+    let mut cursor = buf.as_slice();
+
+    let len = prost::encoding::decode_varint(&mut cursor).unwrap();
+    let (message_buf, mut cursor) = cursor.split_at(len.try_into().unwrap());
+    let trusted_block = TrustedLightBlock::decode(message_buf).unwrap();
+
+    let len = prost::encoding::decode_varint(&mut cursor).unwrap();
+    let (message_buf, mut cursor) = cursor.split_at(len.try_into().unwrap());
+    let untrusted_block = UntrustedLightBlock::decode(message_buf).unwrap();
+
+    let num_headers = untrusted_block.signed_header.header.height.value()
+        - trusted_block.signed_header.header.height.value()
+        - 1;
+    let mut interval_headers = Vec::with_capacity(num_headers.try_into().unwrap());
+    for _ in 0..num_headers {
+        let len = prost::encoding::decode_varint(&mut cursor).unwrap();
+        let (message_buf, rest) = cursor.split_at(len.try_into().unwrap());
+        cursor = rest;
+        let header: Header =
+            Protobuf::<tendermint_proto::v0_37::types::Header>::decode(message_buf).unwrap();
+        interval_headers.push(header);
+    }
 
     let data_roots = collect_data_roots(&trusted_block, &interval_headers, &untrusted_block);
 
@@ -100,14 +125,14 @@ fn main() {
     env::commit(&LightClientCommit {
         // TODO also committing block hashes, under the assumption that verifying those is more secure than
         //      verifying just the data roots. This might not be necessary.
-        trusted_block_hash: expect_block_hash(&trusted_block),
-        next_block_hash: expect_block_hash(&untrusted_block),
+        trusted_block_hash: expect_block_hash(&trusted_block.signed_header.header()),
+        next_block_hash: expect_block_hash(&untrusted_block.signed_header.header()),
         data_roots,
     });
 }
 
-fn expect_block_hash(block: &LightBlock) -> [u8; 32] {
-    let Hash::Sha256(first_block_hash) = block.signed_header.header().hash() else {
+fn expect_block_hash(block: &Header) -> [u8; 32] {
+    let Hash::Sha256(first_block_hash) = block.hash() else {
         unreachable!("Header hash should always be a non empty sha256");
     };
     first_block_hash
