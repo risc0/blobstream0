@@ -145,13 +145,13 @@ async fn main() -> anyhow::Result<()> {
                 address.parse()?
             } else {
                 let deployed_address = if deploy.dev {
-                    tracing::debug!("Deploying mock verifier");
+                    tracing::debug!(target: "blobstream0::cli", "Deploying mock verifier");
                     MockVerifier::deploy(&provider, [0, 0, 0, 0].into())
                         .await?
                         .address()
                         .clone()
                 } else {
-                    tracing::debug!("Deploying groth16 verifier");
+                    tracing::debug!(target: "blobstream0::cli", "Deploying groth16 verifier");
                     RiscZeroGroth16Verifier::deploy(
                         &provider,
                         CONTROL_ID.into(),

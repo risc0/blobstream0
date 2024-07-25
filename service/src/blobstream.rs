@@ -27,6 +27,7 @@ macro_rules! handle_temporal_result {
             Err(e) => {
                 $consecutive_failures += 1;
                 tracing::warn!(
+                    target: "blobstream0::service",
                     "failed to request current state: {} (consecutive: {})",
                     e,
                     $consecutive_failures
@@ -104,6 +105,7 @@ where
                 eth_verified_hash: _,
             } = handle_temporal_result!(self.fetch_current_state().await?, consecutive_failures);
             tracing::info!(
+                target: "blobstream0::service",
                 "Contract height: {eth_verified_height}, tendermint height: {tm_height}"
             );
 
@@ -116,6 +118,7 @@ where
                 //      https://github.com/risc0/blobstream0/issues/19 implemented
                 let wait_time = 10 + (3 * (block_target - tm_height));
                 tracing::info!(
+                    target: "blobstream0::service",
                     "Not enough tendermint blocks to create batch, waiting {} seconds",
                     wait_time
                 );
