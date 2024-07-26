@@ -121,10 +121,8 @@ fn main() {
     // Verify the light client transition to untrusted block
     light_client_verify(&trusted_block, &untrusted_block);
 
-    // TODO also mixing serialization with using default, resolve with above
+    // TODO possibly avoid mixing serialization https://github.com/risc0/blobstream0/issues/1
     env::commit(&LightClientCommit {
-        // TODO also committing block hashes, under the assumption that verifying those is more secure than
-        //      verifying just the data roots. This might not be necessary.
         trusted_block_hash: expect_block_hash(&trusted_block.signed_header.header()),
         next_block_hash: expect_block_hash(&untrusted_block.signed_header.header()),
         data_roots,
