@@ -2862,7 +2862,6 @@ version = "0.1.0"
 dependencies = [
  "blobstream0-primitives",
  "ciborium",
- "prost",
  "risc0-zkvm",
  "serde",
  "serde_json",
