@@ -15,9 +15,7 @@
 use blobstream0_primitives::proto::{TrustedLightBlock, UntrustedLightBlock};
 use blobstream0_primitives::{LightClientCommit, DEFAULT_PROVER_OPTS};
 use core::time::Duration;
-use prost::Message;
 use risc0_zkvm::guest::env;
-use std::fmt::Display;
 use std::io::Read;
 use std::iter;
 use tendermint::Hash;
@@ -80,33 +78,25 @@ fn light_client_verify(trusted_block: &TrustedLightBlock, untrusted_block: &Untr
     );
 }
 
-fn framed_read<T, P>(buf: &mut &[u8]) -> T
-where
-    P: Message + From<T> + Default,
-    T: Protobuf<P> + Sized + Clone + TryFrom<T>,
-    <T as TryFrom<P>>::Error: Display,
-{
-    let len = prost::encoding::decode_varint(buf).unwrap();
-    let (message_buf, rest) = buf.split_at(len.try_into().unwrap());
-    *buf = rest;
-    T::decode(message_buf).unwrap()
-}
-
 fn main() {
     // TODO update this to length prefix to avoid reallocs
     let mut buf = Vec::<u8>::new();
     env::stdin().read_to_end(&mut buf).unwrap();
     let mut cursor = buf.as_slice();
 
-    let trusted_block: TrustedLightBlock = framed_read(&mut cursor);
-    let untrusted_block: UntrustedLightBlock = framed_read(&mut cursor);
+    let trusted_block = TrustedLightBlock::decode_length_delimited(&mut cursor).unwrap();
+    let untrusted_block = UntrustedLightBlock::decode_length_delimited(&mut cursor).unwrap();
 
     let num_headers = untrusted_block.signed_header.header.height.value()
         - trusted_block.signed_header.header.height.value()
         - 1;
     let mut interval_headers = Vec::with_capacity(num_headers.try_into().unwrap());
     for _ in 0..num_headers {
-        let header = framed_read::<Header, tendermint_proto::v0_37::types::Header>(&mut cursor);
+        let header: Header =
+            Protobuf::<tendermint_proto::v0_37::types::Header>::decode_length_delimited(
+                &mut cursor,
+            )
+            .unwrap();
         interval_headers.push(header);
     }
 
