@@ -80,17 +80,17 @@ fn light_client_verify(trusted_block: &TrustedLightBlock, untrusted_block: &Untr
     );
 }
 
-// fn framed_read<T, P>(buf: &mut &[u8]) -> T
-// where
-//     P: Message + From<T> + Default,
-//     T: Protobuf<P> + Sized + Clone + TryFrom<T>,
-//     <T as TryFrom<P>>::Error: Display,
-// {
-//     let len = prost::encoding::decode_varint(buf).unwrap();
-//     let (message_buf, rest) = buf.split_at(len.try_into().unwrap());
-//     *buf = rest;
-//     T::decode(message_buf).unwrap()
-// }
+fn framed_read<T, P>(buf: &mut &[u8]) -> T
+where
+    P: Message + From<T> + Default,
+    T: Protobuf<P> + Sized + Clone + TryFrom<T>,
+    <T as TryFrom<P>>::Error: Display,
+{
+    let len = prost::encoding::decode_varint(buf).unwrap();
+    let (message_buf, rest) = buf.split_at(len.try_into().unwrap());
+    *buf = rest;
+    T::decode(message_buf).unwrap()
+}
 
 fn main() {
     // TODO update this to length prefix to avoid reallocs
@@ -98,24 +98,15 @@ fn main() {
     env::stdin().read_to_end(&mut buf).unwrap();
     let mut cursor = buf.as_slice();
 
-    let len = prost::encoding::decode_varint(&mut cursor).unwrap();
-    let (message_buf, mut cursor) = cursor.split_at(len.try_into().unwrap());
-    let trusted_block = TrustedLightBlock::decode(message_buf).unwrap();
-
-    let len = prost::encoding::decode_varint(&mut cursor).unwrap();
-    let (message_buf, mut cursor) = cursor.split_at(len.try_into().unwrap());
-    let untrusted_block = UntrustedLightBlock::decode(message_buf).unwrap();
+    let trusted_block: TrustedLightBlock = framed_read(&mut cursor);
+    let untrusted_block: UntrustedLightBlock = framed_read(&mut cursor);
 
     let num_headers = untrusted_block.signed_header.header.height.value()
         - trusted_block.signed_header.header.height.value()
         - 1;
     let mut interval_headers = Vec::with_capacity(num_headers.try_into().unwrap());
     for _ in 0..num_headers {
-        let len = prost::encoding::decode_varint(&mut cursor).unwrap();
-        let (message_buf, rest) = cursor.split_at(len.try_into().unwrap());
-        cursor = rest;
-        let header: Header =
-            Protobuf::<tendermint_proto::v0_37::types::Header>::decode(message_buf).unwrap();
+        let header = framed_read::<Header, tendermint_proto::v0_37::types::Header>(&mut cursor);
         interval_headers.push(header);
     }
 
