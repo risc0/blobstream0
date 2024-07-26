@@ -39,7 +39,7 @@ sol!(
 const CELESTIA_RPC_URL: &str = "https://rpc.celestia-mocha.com";
 
 const BATCH_START: u64 = 10;
-const BATCH_END: u64 = 20;
+const BATCH_END: u64 = 42;
 const PROOF_HEIGHT: u64 = 15;
 
 /// Type matches Celestia API endpoint for generating proof.

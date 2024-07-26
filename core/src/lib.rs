@@ -95,7 +95,7 @@ pub async fn fetch_headers(
         let start_height = curr;
         curr += HEADER_REQ_COUNT;
         // Note: range end is inclusive for Tendermint, so end max is decremented.
-        let end_height = std::cmp::min(curr, range.end - 1);
+        let end_height = std::cmp::min(curr, range.end) - 1;
         let jh: JoinHandle<anyhow::Result<_>> = tokio::spawn(async move {
             let _permit = semaphore.acquire().await?;
             tracing::debug!(
@@ -159,10 +159,18 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
         Protobuf::<ProtoHeader>::encode_length_delimited(header, &mut buffer)?;
     }
 
+    let buffer_len: u32 = buffer
+        .len()
+        .try_into()
+        .expect("buffer cannot exceed 32 bit range");
+
     tracing::debug!(target: "blobstream0::core", "Proving light client");
     // Note: must be in blocking context to not have issues with Bonsai blocking client when selected
     let prove_info = tokio::task::spawn_blocking(move || {
-        let env = ExecutorEnv::builder().write_slice(&buffer).build()?;
+        let env = ExecutorEnv::builder()
+            .write(&buffer_len)?
+            .write_slice(&buffer)
+            .build()?;
 
         let prover = default_prover();
         prover.prove(env, TM_LIGHT_CLIENT_ELF)
