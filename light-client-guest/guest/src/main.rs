@@ -16,7 +16,6 @@ use blobstream0_primitives::proto::{TrustedLightBlock, UntrustedLightBlock};
 use blobstream0_primitives::{LightClientCommit, DEFAULT_PROVER_OPTS};
 use core::time::Duration;
 use risc0_zkvm::guest::env;
-use std::io::Read;
 use std::iter;
 use tendermint::Hash;
 use tendermint_light_client_verifier::{types::Header, ProdVerifier, Verdict, Verifier};
@@ -79,9 +78,10 @@ fn light_client_verify(trusted_block: &TrustedLightBlock, untrusted_block: &Untr
 }
 
 fn main() {
-    // TODO update this to length prefix to avoid reallocs
-    let mut buf = Vec::<u8>::new();
-    env::stdin().read_to_end(&mut buf).unwrap();
+    let len: u32 = env::read();
+    let mut buf = vec![0; len as usize];
+    env::read_slice(&mut buf);
+
     let mut cursor = buf.as_slice();
 
     let trusted_block = TrustedLightBlock::decode_length_delimited(&mut cursor).unwrap();
