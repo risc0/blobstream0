@@ -15,7 +15,9 @@
 use blobstream0_primitives::proto::{TrustedLightBlock, UntrustedLightBlock};
 use blobstream0_primitives::{LightClientCommit, DEFAULT_PROVER_OPTS};
 use core::time::Duration;
+use prost::Message;
 use risc0_zkvm::guest::env;
+use std::fmt::Display;
 use std::io::Read;
 use std::iter;
 use tendermint::Hash;
@@ -80,10 +82,11 @@ fn light_client_verify(trusted_block: &TrustedLightBlock, untrusted_block: &Untr
 
 // fn framed_read<T, P>(buf: &mut &[u8]) -> T
 // where
-//     T: Protobuf<P>,
 //     P: Message + From<T> + Default,
+//     T: Protobuf<P> + Sized + Clone + TryFrom<T>,
+//     <T as TryFrom<P>>::Error: Display,
 // {
-//     let len = prost::encoding::decode_varint(&mut buf).unwrap();
+//     let len = prost::encoding::decode_varint(buf).unwrap();
 //     let (message_buf, rest) = buf.split_at(len.try_into().unwrap());
 //     *buf = rest;
 //     T::decode(message_buf).unwrap()

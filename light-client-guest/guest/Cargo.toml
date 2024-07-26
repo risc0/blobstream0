@@ -17,7 +17,7 @@ tendermint-light-client-verifier = { version = "0.37.0", default-features = fals
 ] }
 ciborium = "0.2"
 blobstream0-primitives = { path = "../../primitives" }
-prost = { version = "0.13", default-features = false }
+prost = { version = "0.12", default-features = false }
 
 [patch.crates-io]
 sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }

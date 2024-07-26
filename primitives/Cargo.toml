@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 alloy-sol-types = { version = "0.7", features = ["json"] }
-prost = { version = "0.13", default-features = false }
-prost-types = { version = "0.13", default-features = false }
+prost = { version = "0.12", default-features = false }
+prost-types = { version = "0.12", default-features = false }
 serde = { workspace = true }
 serde_bytes = "0.11"
 serde_with = { version = "3.9", default-features = false, features = ["macros", "alloc"] }
