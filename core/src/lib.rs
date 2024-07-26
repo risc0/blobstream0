@@ -144,11 +144,13 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
         input.interval_headers.len() as u64
     );
     let expected_next_hash = input.untrusted_block.signed_header.header().hash();
+
     TrustedLightBlock {
         signed_header: input.trusted_block.signed_header,
         next_validators: input.trusted_block.next_validators,
     }
     .encode_length_delimited(&mut buffer)?;
+
     UntrustedLightBlock {
         signed_header: input.untrusted_block.signed_header,
         validators: input.untrusted_block.validators,

@@ -99,6 +99,8 @@ fn main() {
             .unwrap();
         interval_headers.push(header);
     }
+    // Assert all bytes have been read, as a sanity check
+    assert!(cursor.is_empty());
 
     let data_roots = collect_data_roots(&trusted_block, &interval_headers, &untrusted_block);
 
