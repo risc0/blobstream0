@@ -36,13 +36,22 @@ fn main() {
     });
 
     // Generate Rust source files for the methods crate.
-    let guests = embed_methods_with_options(HashMap::from([(
-        "guests",
-        GuestOptions {
-            features: Vec::new(),
-            use_docker,
-        },
-    )]));
+    let guests = embed_methods_with_options(HashMap::from([
+        (
+            "batch-guest",
+            GuestOptions {
+                features: Vec::new(),
+                use_docker: use_docker.clone(),
+            },
+        ),
+        (
+            "tm-light-client",
+            GuestOptions {
+                features: vec![],
+                use_docker,
+            },
+        ),
+    ]));
 
     // Generate Solidity source files for use with Forge.
     let solidity_opts = risc0_build_ethereum::Options::default()
@@ -92,4 +101,5 @@ fn main() {
         "cargo:rerun-if-changed={}",
         contracts_dir.join("src").display()
     );
+    println!("cargo:rerun-if-env-changed=RISC0_USE_DOCKER");
 }
