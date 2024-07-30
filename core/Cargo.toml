@@ -16,6 +16,7 @@ risc0-zkvm = { version = "=1.0.1" }
 serde_bytes = "0.11"
 tendermint = { workspace = true }
 tendermint-light-client-verifier = { workspace = true }
+tendermint-proto = { workspace = true }
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
 tracing = "0.1.40"

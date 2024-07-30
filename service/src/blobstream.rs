@@ -28,7 +28,7 @@ macro_rules! handle_temporal_result {
                 $consecutive_failures += 1;
                 tracing::warn!(
                     target: "blobstream0::service",
-                    "failed to request current state: {} (consecutive: {})",
+                    "failed to update contract state: {} (consecutive: {})",
                     e,
                     $consecutive_failures
                 );

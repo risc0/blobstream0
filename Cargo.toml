@@ -4,11 +4,12 @@ members = ["cli", "core", "primitives", "service"]
 default-members = ["service"]
 
 [workspace.dependencies]
-tendermint-rpc = "0.37.0"
 tendermint = { version = "0.37.0", default-features = false }
 tendermint-light-client-verifier = { version = "0.37.0", default-features = false, features = [
 	"rust-crypto",
 ] }
+tendermint-proto = { version = "0.37.0", default-features = false }
+tendermint-rpc = "0.37.0"
 serde = "1.0"
 # TODO remove this once serialization switches over
 ciborium = "0.2"

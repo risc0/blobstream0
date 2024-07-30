@@ -5,15 +5,17 @@ edition = "2021"
 
 [dependencies]
 alloy-sol-types = { version = "0.7", features = ["json"] }
+prost = { version = "0.12", default-features = false }
+prost-types = { version = "0.12", default-features = false }
 serde = { workspace = true }
 serde_bytes = "0.11"
-serde_tuple = "0.5"
 serde_with = { version = "3.9", default-features = false, features = ["macros", "alloc"] }
 sha2 = { workspace = true }
 tendermint = { workspace = true }
 tendermint-light-client-verifier = { version = "0.37.0", default-features = false, features = [
 	"rust-crypto",
 ] }
+tendermint-proto = { workspace = true }
 thiserror = "1.0"
 
 [target.'cfg(not(target_os = "zkvm"))'.dependencies]
