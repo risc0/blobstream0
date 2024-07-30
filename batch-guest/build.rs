@@ -40,7 +40,7 @@ fn main() {
         "batch-guest",
         GuestOptions {
             features: Vec::new(),
-            use_docker: use_docker.clone(),
+            use_docker,
         },
     )]));
 
