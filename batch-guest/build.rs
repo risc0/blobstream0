@@ -37,7 +37,7 @@ fn main() {
 
     // Generate Rust source files for the methods crate.
     let guests = embed_methods_with_options(HashMap::from([(
-        "guests",
+        "batch-guest",
         GuestOptions {
             features: Vec::new(),
             use_docker,
@@ -92,4 +92,5 @@ fn main() {
         "cargo:rerun-if-changed={}",
         contracts_dir.join("src").display()
     );
+    println!("cargo:rerun-if-env-changed=RISC0_USE_DOCKER");
 }

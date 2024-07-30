@@ -12,6 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::{collections::HashMap, env};
+
+use risc0_build::{embed_methods_with_options, DockerOptions, GuestOptions};
+
 fn main() {
-    risc0_build::embed_methods();
+    let docker_opts = DockerOptions {
+        root_dir: Some("../".into()),
+    };
+
+    let use_docker = if env::var("RISC0_USE_DOCKER").is_ok() {
+        Some(docker_opts)
+    } else {
+        None
+    };
+
+    let map = HashMap::from([(
+        "tm-light-client",
+        GuestOptions {
+            features: vec![],
+            use_docker,
+        },
+    )]);
+
+    embed_methods_with_options(map);
+
+    println!("cargo:rerun-if-env-changed=RISC0_USE_DOCKER");
 }
