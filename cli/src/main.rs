@@ -17,9 +17,9 @@
 use alloy::{
     hex::FromHex,
     network::EthereumWallet,
-    primitives::{hex, Address, FixedBytes},
+    primitives::{hex, Address, FixedBytes, Bytes},
     providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
+    signers::{k256::sha2::{Digest,Sha256}, local::PrivateKeySigner},
 };
 use alloy_sol_types::sol;
 use blobstream0_core::prove_block_range;
@@ -58,6 +58,7 @@ const BN254_CONTROL_ID: [u8; 32] =
 enum BlobstreamCli {
     ProveRange(ProveRangeArgs),
     Deploy(DeployArgs),
+    PostRange(PostRangeArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -106,6 +107,22 @@ struct DeployArgs {
     /// If deploying verifier, will it deploy the mock verifier
     #[clap(long)]
     dev: bool,
+}
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct PostRangeArgs {
+    /// The Ethereum RPC URL
+    #[clap(long, env)]
+    eth_rpc: String,
+
+    /// Hex encoded private key to use for submitting proofs to Ethereum
+    #[clap(long, env)]
+    private_key_hex: String,
+
+    /// Address of risc0 verifier to use (either mock or groth16)
+    #[clap(long, env)]
+    verifier_address: String,
 }
 
 #[tokio::main]
@@ -175,6 +192,25 @@ async fn main() -> anyhow::Result<()> {
             .await?;
 
             println!("deployed contract to address: {}", contract.address());
+        }
+        BlobstreamCli::PostRange(range) => {
+            let signer: PrivateKeySigner = range.private_key_hex.parse()?;
+            let wallet = EthereumWallet::from(signer);
+
+            let provider = ProviderBuilder::new()
+                .with_recommended_fillers()
+                .wallet(wallet)
+                .on_http(range.eth_rpc.parse()?);
+
+            let verifier = RiscZeroGroth16Verifier::new(range.verifier_address.parse()?, &provider);
+            let journal_bytes: Bytes = "6a75737420612073696d706c652072656365697074".parse()?;
+            let journal_hash: [u8; 32] = Sha256::digest(journal_bytes).into();
+
+            verifier.verify(
+                "310fe598039b6a4c59c576a9afc538bef01bd396cdbc979fe912c4d9c8f4f665c39b8a8f103328a969252a25e1aa69352f7d74b0093476c09e1cc4785201459259341fa220774a7b3e64067d37fa72251fd4766292dbebdea69b55e0790df3fedac65a601cca6fa7ec7d89b5711d8cf0533c1e44dc954de20dd1a7449544a11bd3dd6a453003d2b7dcfae42c88d3b38aa8ce84fc4e022ed91fa1f3ee06ae4b1eacf3033b2d4927494fc2a4dc44b18fac3084fd91d7e161e0e526a033e161f8d69de3babb163578f5916b554bd4a45531913d8c472f03744175bc1000de45110b7cef06d31257b005c5ca02af4704976f6fad82bf6e9e52ea208c7a4c535dc029db456589".parse()?,
+                "0e3b8f40fe72d3e43d0c29df23fd4b02607c9ae59bc166fb306fa2aa2ac7d640".parse()?,
+                journal_hash.into(), 
+            ).send().await?.watch().await?;
         }
     }
 
