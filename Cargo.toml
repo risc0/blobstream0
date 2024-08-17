@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
-members = ["cli", "core", "primitives", "service"]
-default-members = ["service"]
+members = ["cli", "core", "primitives"]
+default-members = ["cli"]
 
 [workspace.dependencies]
 tendermint = { version = "0.37.0", default-features = false }

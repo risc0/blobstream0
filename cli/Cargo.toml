@@ -1,5 +1,5 @@
 [package]
-name = "blobstream0-cli"
+name = "blobstream0"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,3 +17,9 @@ tendermint-rpc = { workspace = true, features = ["http-client"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dev-dependencies]
+reqwest = "0.12.4"
+serde = { workspace = true }
+serde_json = "1.0"
+serde_with = { version = "3.8", features = ["base64"] }
