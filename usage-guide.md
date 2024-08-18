@@ -12,7 +12,7 @@ anvil
 Deploy verifier and blobstream contract
 
 ```console
-RUST_LOG=info cargo run -p blobstream0-cli -- deploy \
+RUST_LOG=info cargo run -p blobstream0 -- deploy \
 	--eth-rpc http://127.0.0.1:8545 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 	--tm-height 9 \
@@ -25,7 +25,7 @@ RUST_LOG=info cargo run -p blobstream0-cli -- deploy \
 Start the service:
 
 ```
-RISC0_DEV_MODE=true RUST_LOG=host=trace,info cargo run -p service -- \
+RISC0_DEV_MODE=true RUST_LOG=host=trace,info cargo run -p blobstream0 -- service \
 	--tendermint-rpc https://rpc.celestia-mocha.com \
 	--eth-rpc http://127.0.0.1:8545/ \
 	--eth-address 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 \
@@ -52,7 +52,7 @@ export BONSAI_API_URL=<BONSAI_URL>
 > Note: you can instead use local proving and not set these env variables if on an x86 machine. See more https://dev.risczero.com/api/next/generating-proofs/proving-options
 
 ```
-RUST_LOG=info cargo run -p blobstream0-cli -- deploy \
+RUST_LOG=info cargo run -p blobstream0 -- deploy \
 	--eth-rpc http://127.0.0.1:8545 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 	--tm-height 9 \
@@ -69,7 +69,7 @@ Currently there are already groth16 and mock verifiers deployed to Sepolia.
 Deploy the blobstream contract with the `--verifier-address` from above:
 
 ```
-RUST_LOG=info cargo run -p blobstream0-cli -- deploy \
+RUST_LOG=info cargo run -p blobstream0 -- deploy \
 	--eth-rpc https://ethereum-sepolia-rpc.publicnode.com \
 	--private-key-hex <ADD KEY HERE> \
 	--tm-height 1802142 \
@@ -80,7 +80,7 @@ RUST_LOG=info cargo run -p blobstream0-cli -- deploy \
 Run the service with `RISC0_DEV_MODE=true` if you chose the mock verifier.
 
 ```
-RUST_LOG=host=trace,info cargo run -p service --release -- \
+RUST_LOG=host=trace,info cargo run -p blobstream0 --release -- service \
 	--tendermint-rpc https://rpc.celestia-mocha.com \
 	--eth-rpc https://ethereum-sepolia-rpc.publicnode.com \
 	--eth-address <BLOBSTREAM ADDRESS FROM DEPLOY> \

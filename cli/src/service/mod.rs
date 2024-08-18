@@ -19,16 +19,13 @@ use alloy::{
 };
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
-use dotenv::dotenv;
 use tendermint_rpc::HttpClient;
-use tracing_subscriber::fmt::format;
-use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 mod blobstream;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
-struct Args {
+pub(crate) struct ServiceArgs {
     /// The Tendermint RPC URL
     #[clap(long, env)]
     tendermint_rpc: String,
@@ -50,41 +47,34 @@ struct Args {
     batch_size: u64,
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    dotenv().ok();
+impl ServiceArgs {
+    pub(crate) async fn start(self) -> anyhow::Result<()> {
+        let ServiceArgs {
+            tendermint_rpc,
+            eth_rpc,
+            eth_address,
+            private_key_hex,
+            batch_size,
+        } = self;
 
-    tracing_subscriber::fmt()
-        .event_format(format().compact())
-        .with_span_events(FmtSpan::CLOSE)
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
+        let tm_client = HttpClient::new(tendermint_rpc.as_str())?;
 
-    let Args {
-        tendermint_rpc,
-        eth_rpc,
-        eth_address,
-        private_key_hex,
-        batch_size,
-    } = Args::parse();
+        let signer: PrivateKeySigner = private_key_hex.parse().expect("should parse private key");
+        let wallet = EthereumWallet::from(signer);
 
-    let tm_client = HttpClient::new(tendermint_rpc.as_str())?;
+        // Create a provider with the wallet.
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .wallet(wallet)
+            .on_http(eth_rpc.parse()?);
 
-    let signer: PrivateKeySigner = private_key_hex.parse().expect("should parse private key");
-    let wallet = EthereumWallet::from(signer);
+        let contract = IBlobstream::new(eth_address, provider);
 
-    // Create a provider with the wallet.
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(wallet)
-        .on_http(eth_rpc.parse()?);
+        tracing::info!(target: "blobstream0::service", "Starting service");
+        BlobstreamService::new(contract, tm_client, batch_size)
+            .spawn()
+            .await?;
 
-    let contract = IBlobstream::new(eth_address, provider);
-
-    tracing::info!(target: "blobstream0::service", "Starting service");
-    BlobstreamService::new(contract, tm_client, batch_size)
-        .spawn()
-        .await?;
-
-    Ok(())
+        Ok(())
+    }
 }

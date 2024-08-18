@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO move to separate CLI crate.
-
 use alloy::{
     hex::FromHex,
     network::EthereumWallet,
@@ -31,6 +29,8 @@ use tendermint_rpc::HttpClient;
 use tokio::fs;
 use tracing_subscriber::fmt::format;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
+
+mod service;
 
 // TODO elsewhere if keeping dev mode deploy through CLI
 sol!(
@@ -56,6 +56,7 @@ const BN254_CONTROL_ID: [u8; 32] =
 #[command(name = "blobstream0-cli")]
 #[command(bin_name = "blobstream0-cli")]
 enum BlobstreamCli {
+    Service(service::ServiceArgs),
     ProveRange(ProveRangeArgs),
     Deploy(DeployArgs),
 }
@@ -176,6 +177,7 @@ async fn main() -> anyhow::Result<()> {
 
             println!("deployed contract to address: {}", contract.address());
         }
+        BlobstreamCli::Service(service) => service.start().await?,
     }
 
     Ok(())

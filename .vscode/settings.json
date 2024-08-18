@@ -5,7 +5,6 @@
         "./cli/Cargo.toml",
         "./core/Cargo.toml",
         "./primitives/Cargo.toml",
-        "./service/Cargo.toml"
     ],
     // "rust-analyzer.check.extraEnv": {
     //     "RISC0_SKIP_BUILD": "1",

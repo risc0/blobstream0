@@ -34,7 +34,7 @@ cargo test
 Run the CLI to generate proofs or post those proofs on an Eth based network:
 
 ```console
-cargo run -p blobstream0-cli -- --help
+cargo run -p blobstream0 -- --help
 ```
 
 For docs on running the Blobstream service, see [usage-guide.md](./usage-guide.md).
