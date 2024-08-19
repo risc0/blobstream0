@@ -93,6 +93,7 @@ struct DeployArgs {
     private_key_hex: String,
 
     /// Hex encoded address of admin for upgrades. Will default to the private key address.
+    #[clap(long, env)]
     admin_address: Option<String>,
 
     /// Address of risc0 verifier to use (either mock or groth16)
