@@ -87,3 +87,16 @@ RUST_LOG=blobstream0=debug,info cargo run -p blobstream0 --release -- service \
 	--private-key-hex <ADD KEY HERE> \
 	--batch-size 16
 ```
+
+### Admin transaction examples:
+
+
+```
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 "adminSetImageId(bytes32)" <IMAGE ID>
+
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 "adminSetVerifier(address)" 0x5FbDB2315678afecb367f032d93F642f64180aa3
+
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 "adminSetTrustedState(bytes32,uint64)" 0x5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B 9
+```
+
+> Addresses and private key from default anvil test node

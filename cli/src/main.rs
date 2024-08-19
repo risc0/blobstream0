@@ -92,6 +92,9 @@ struct DeployArgs {
     #[clap(long, env)]
     private_key_hex: String,
 
+    /// Hex encoded address of admin for upgrades. Will default to the private key address.
+    admin_address: Option<String>,
+
     /// Address of risc0 verifier to use (either mock or groth16)
     #[clap(long, env)]
     verifier_address: Option<String>,
@@ -136,8 +139,14 @@ async fn main() -> anyhow::Result<()> {
         }
         BlobstreamCli::Deploy(deploy) => {
             let signer: PrivateKeySigner = deploy.private_key_hex.parse()?;
-            let wallet = EthereumWallet::from(signer);
 
+            let admin_address: Address = if let Some(address) = deploy.admin_address {
+                address.parse()?
+            } else {
+                signer.address()
+            };
+
+            let wallet = EthereumWallet::from(signer);
             let provider = ProviderBuilder::new()
                 .with_recommended_fillers()
                 .wallet(wallet)
@@ -169,6 +178,7 @@ async fn main() -> anyhow::Result<()> {
             // Deploy the contract.
             let contract = IBlobstream::deploy(
                 &provider,
+                admin_address,
                 verifier_address,
                 FixedBytes::<32>::from_hex(deploy.tm_block_hash)?,
                 deploy.tm_height,
