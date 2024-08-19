@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.1", features = ["node-bindings", "network", "providers", "transports", "signer-local"] }
+alloy = { version = "0.2", features = ["node-bindings", "network", "providers", "transports", "signer-local"] }
 anyhow = "1.0"
 blobstream0-core = { path = "../core" }
 blobstream0-primitives = { path = "../primitives" }
@@ -16,7 +16,7 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 [dev-dependencies]
-alloy-contract = "0.1"
+alloy-contract = "0.2"
 alloy-sol-types = "0.7"
 reqwest = "0.12.4"
 serde = { workspace = true }
