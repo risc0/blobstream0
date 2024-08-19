@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.1", features = ["node-bindings", "network", "providers", "transports", "signer-local"] }
-alloy-contract = "0.1"
+alloy = { version = "0.2", features = ["node-bindings", "network", "providers", "transports", "signer-local"] }
+alloy-contract = "0.2"
 alloy-sol-types = { version = "0.7", features = ["json"] }
 anyhow = "1.0"
 bincode = "1.3.3"
