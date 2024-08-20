@@ -84,8 +84,8 @@ jobs:
       - name: run tests
         run: cargo test
 
-      - name: run foundry tests in dev mode
-        env:
-          RISC0_DEV_MODE: true
-        run: forge test -vvv
-        working-directory: contracts
+      # - name: run foundry tests in dev mode
+      #   env:
+      #     RISC0_DEV_MODE: true
+      #   run: forge test -vvv
+      #   working-directory: contracts

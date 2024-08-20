@@ -82,6 +82,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     // Deploy the contract.
     let contract = IBlobstream::deploy(
         &provider,
+        anvil.addresses()[0],
         verifier.address().clone(),
         // Uses Celestia block hash at height below proving range on Mocha
         FixedBytes::<32>::from_hex(

@@ -16,29 +16,11 @@
 
 pragma solidity ^0.8.20;
 
-import {RiscZeroCheats} from "risc0/test/RiscZeroCheats.sol";
-import {console2} from "forge-std/console2.sol";
-import {Test} from "forge-std/Test.sol";
-import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
-import {Blobstream0} from "../src/Blobstream0.sol";
-import {Elf} from "./Elf.sol"; // auto-generated contract after running `cargo build`.
+import {RiscZeroMockVerifier} from "risc0/test/RiscZeroMockVerifier.sol";
+import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
 
-// TODO I will probably just remove this altogether.
-contract Blobstream0Test is RiscZeroCheats, Test {
-    Blobstream0 public blobstream;
-
-    function setUp() public {
-        IRiscZeroVerifier verifier = deployRiscZeroVerifier();
-        blobstream = new Blobstream0(verifier, 0x5D3BDD6B58620A0B6C5A9122863D11DA68EB18935D12A9F4E4CF1A27EB39F1AC, 10);
-    }
-
-    function test_SetEven() public {
-        // uint256 number = 12345678;
-        // (bytes memory journal, bytes memory seal) = prove(
-        //     Elf.BATCH_GUEST_PATH,
-        //     abi.encode(number)
-        // );
-        // blobstream.set(abi.decode(journal, (uint256)), seal);
-        // assertEq(blobstream.get(), number);
-    }
+contract Blobstream0Test {
+    // NOTE: This is only used to build these contracts to be used for the CLI and tests, ignore
+    RiscZeroGroth16Verifier a;
+    RiscZeroMockVerifier b;
 }
