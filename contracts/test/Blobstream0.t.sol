@@ -19,8 +19,8 @@ pragma solidity ^0.8.20;
 import {RiscZeroMockVerifier} from "risc0/test/RiscZeroMockVerifier.sol";
 import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
 
-contract Blobstream0Test  {
-	// NOTE: This is only used to build these contracts to be used for the CLI and tests, ignore
-	RiscZeroGroth16Verifier a;
-	RiscZeroMockVerifier b;
+contract Blobstream0Test {
+    // NOTE: This is only used to build these contracts to be used for the CLI and tests, ignore
+    RiscZeroGroth16Verifier a;
+    RiscZeroMockVerifier b;
 }
