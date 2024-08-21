@@ -78,7 +78,8 @@ fn light_client_verify(trusted_block: &TrustedLightBlock, untrusted_block: &Untr
 }
 
 fn main() {
-    let len: u32 = env::read();
+    let mut len: u32 = 0;
+    env::read_slice(core::slice::from_mut(&mut len));
     let mut buf = vec![0; len as usize];
     env::read_slice(&mut buf);
 

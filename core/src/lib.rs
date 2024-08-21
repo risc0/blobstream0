@@ -170,7 +170,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     // Note: must be in blocking context to not have issues with Bonsai blocking client when selected
     let prove_info = tokio::task::spawn_blocking(move || {
         let env = ExecutorEnv::builder()
-            .write(&buffer_len)?
+            .write_slice(&[buffer_len])
             .write_slice(&buffer)
             .build()?;
 
