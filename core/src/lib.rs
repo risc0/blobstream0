@@ -15,12 +15,12 @@
 use alloy::{network::Network, primitives::TxHash, providers::Provider, transports::Transport};
 use alloy_sol_types::SolValue;
 use anyhow::Context;
-use batch_guest::BATCH_GUEST_ELF;
 use blobstream0_primitives::{
     proto::{TrustedLightBlock, UntrustedLightBlock},
     IBlobstream::{IBlobstreamInstance, RangeCommitment},
     LightBlockProveData,
 };
+use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, ProverOpts, Receipt};
 use std::{ops::Range, sync::Arc};
@@ -175,7 +175,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
             .build()?;
 
         let prover = default_prover();
-        prover.prove_with_opts(env, BATCH_GUEST_ELF, &ProverOpts::groth16())
+        prover.prove_with_opts(env, LIGHT_CLIENT_GUEST_ELF, &ProverOpts::groth16())
     })
     .await??;
     let receipt = prove_info.receipt;

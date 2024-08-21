@@ -37,7 +37,7 @@ fn main() {
 
     // Generate Rust source files for the methods crate.
     let guests = embed_methods_with_options(HashMap::from([(
-        "batch-guest",
+        "light-client-guest",
         GuestOptions {
             features: Vec::new(),
             use_docker,
@@ -53,7 +53,7 @@ fn main() {
 
     let contracts_dir = fs::canonicalize(env!("CARGO_MANIFEST_DIR"))
         .unwrap()
-        // Go back a directory from `./batch-guest`
+        // Go back a directory from `./light-client-guest`
         .parent()
         .unwrap()
         // Use guest directory.

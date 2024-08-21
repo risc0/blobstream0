@@ -55,7 +55,7 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     ///         It uniquely represents the logic of that guest program,
     ///         ensuring that only proofs generated from a pre-defined guest program
     ///         (in this case, checking if a number is even) are considered valid.
-    bytes32 public imageId = ImageID.BATCH_GUEST_ID;
+    bytes32 public imageId = ImageID.LIGHT_CLIENT_GUEST_ID;
 
     uint256 public proofNonce;
 

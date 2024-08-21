@@ -970,15 +970,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
-name = "batch-guest"
-version = "0.1.0"
-dependencies = [
- "risc0-build",
- "risc0-build-ethereum",
- "serde_json",
-]
-
-[[package]]
 name = "bech32"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1071,8 +1062,8 @@ dependencies = [
  "alloy",
  "alloy-sol-types",
  "anyhow",
- "batch-guest",
  "blobstream0-primitives",
+ "light-client-guest",
  "risc0-ethereum-contracts",
  "risc0-zkvm",
  "serde_bytes",
@@ -3084,6 +3075,15 @@ checksum = "c0ff37bd590ca25063e35af745c343cb7a0271906fb7b37e4813e8f79f00268d"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
+]
+
+[[package]]
+name = "light-client-guest"
+version = "0.1.0"
+dependencies = [
+ "risc0-build",
+ "risc0-build-ethereum",
+ "serde_json",
 ]
 
 [[package]]
