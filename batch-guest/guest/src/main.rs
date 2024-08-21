@@ -14,55 +14,127 @@
 
 use alloy_primitives::U256;
 use alloy_sol_types::SolValue;
-use blobstream0_primitives::{
-    IBlobstream::{DataRootTuple, RangeCommitment},
-    LightClientCommit, MerkleTree,
-};
-use light_client_guest::TM_LIGHT_CLIENT_ID;
-use risc0_zkvm::{guest::env, serde::from_slice};
-use serde_bytes::ByteBuf;
+use blobstream0_primitives::proto::{TrustedLightBlock, UntrustedLightBlock};
+use blobstream0_primitives::IBlobstream::{DataRootTuple, RangeCommitment};
+use blobstream0_primitives::{MerkleTree, DEFAULT_PROVER_OPTS};
+use core::time::Duration;
+use risc0_zkvm::guest::env;
+use std::iter;
+use tendermint::Hash;
+use tendermint_light_client_verifier::{types::Header, ProdVerifier, Verdict, Verifier};
+use tendermint_proto::Protobuf;
 
-/// Alias to represent the bytes from the journals being recursively proven.
-type JournalBytes = ByteBuf;
-
-fn main() {
-    // Input the vector of proofs to batch.
-    let input: Vec<JournalBytes> = env::read();
-
-    let mut trusted_header_hash = None;
+fn build_merkle_root(
+    trusted_block: &TrustedLightBlock,
+    interval_headers: &[Header],
+    untrusted_block: &UntrustedLightBlock,
+) -> [u8; 32] {
     let mut merkle_tree = MerkleTree::default();
-    let mut last_verified: Option<LightClientCommit> = None;
-    for journal in input {
-        env::verify(TM_LIGHT_CLIENT_ID, &journal).unwrap();
-        let commit: LightClientCommit = from_slice(&journal).unwrap();
-        if let Some(prev_verified) = last_verified.as_ref() {
-            // Assert that the previous block commitment equals the next.
-            assert_eq!(&commit.trusted_block_hash, &prev_verified.next_block_hash);
-        } else {
-            trusted_header_hash = Some(commit.trusted_block_hash);
-        }
 
-        for (height, data_root) in &commit.data_roots {
-            // TODO this is a bit inefficient, since we don't need to keep intermediate nodes in heap.
-            //      ideally this just generates hash and drops any intermediate value. (minor opt)
-            merkle_tree.push(&DataRootTuple {
-                height: U256::from(*height),
-                dataRoot: data_root.into(),
-            });
-        }
+    let trusted_header = trusted_block.signed_header.header();
+    let untrusted_header = untrusted_block.signed_header.header();
+    let mut previous = trusted_header;
+    for header in interval_headers.iter().chain(iter::once(untrusted_header)) {
+        // Check hash links between blocks
+        assert_eq!(
+            header
+                .last_block_id
+                .expect("Header must hash link to previous block")
+                .hash,
+            previous.hash()
+        );
+        previous = header;
 
-        // Set the most recently validated block, to validate the next against.
-        last_verified = Some(commit);
+        // Push data root of checked header.
+        merkle_tree.push(&DataRootTuple {
+            height: U256::from(header.height.value()),
+            dataRoot: expect_sha256_data_hash(header).into(),
+        });
     }
 
-    let latest_block = last_verified.unwrap();
+    merkle_tree.root()
+}
+
+// TODO move this to primitives if possible, and re-use in host checks.
+fn light_client_verify(trusted_block: &TrustedLightBlock, untrusted_block: &UntrustedLightBlock) {
+    let vp = ProdVerifier::default();
+
+    let trusted_state = trusted_block.as_trusted_state();
+    let untrusted_state = untrusted_block.as_untrusted_state();
+
+    // Check the next_validators hash, as verify_update_header leaves it for caller to check.
+    assert_eq!(
+        trusted_state.next_validators.hash(),
+        trusted_state.next_validators_hash
+    );
+
+    // This verify time picked pretty arbitrarily, need to be after header time and within
+    // trusting window.
+    let verify_time = untrusted_block.signed_header.header().time + Duration::from_secs(1);
+    let verdict = vp.verify_update_header(
+        untrusted_state,
+        trusted_state,
+        &DEFAULT_PROVER_OPTS,
+        verify_time.unwrap(),
+    );
+
+    assert!(
+        matches!(verdict, Verdict::Success),
+        "validation failed, {:?}",
+        verdict
+    );
+}
+
+fn main() {
+    let mut len: u32 = 0;
+    env::read_slice(core::slice::from_mut(&mut len));
+    let mut buf = vec![0; len as usize];
+    env::read_slice(&mut buf);
+
+    let mut cursor = buf.as_slice();
+
+    let trusted_block = TrustedLightBlock::decode_length_delimited(&mut cursor).unwrap();
+    let untrusted_block = UntrustedLightBlock::decode_length_delimited(&mut cursor).unwrap();
+
+    let num_headers = untrusted_block.signed_header.header.height.value()
+        - trusted_block.signed_header.header.height.value()
+        - 1;
+    let mut interval_headers = Vec::with_capacity(num_headers.try_into().unwrap());
+    for _ in 0..num_headers {
+        let header: Header =
+            Protobuf::<tendermint_proto::v0_37::types::Header>::decode_length_delimited(
+                &mut cursor,
+            )
+            .unwrap();
+        interval_headers.push(header);
+    }
+    // Assert all bytes have been read, as a sanity check
+    assert!(cursor.is_empty());
+
+    let merkle_root = build_merkle_root(&trusted_block, &interval_headers, &untrusted_block);
+
+    // Verify the light client transition to untrusted block
+    light_client_verify(&trusted_block, &untrusted_block);
+
     let commit = RangeCommitment {
-        trustedHeaderHash: trusted_header_hash
-            .expect("must be at least one verified block")
-            .into(),
-        newHeight: latest_block.data_roots.last().unwrap().0,
-        newHeaderHash: latest_block.next_block_hash.into(),
-        merkleRoot: merkle_tree.root().into(),
+        trustedHeaderHash: expect_block_hash(trusted_block.signed_header.header()).into(),
+        newHeight: untrusted_block.signed_header.header.height.value(),
+        newHeaderHash: expect_block_hash(untrusted_block.signed_header.header()).into(),
+        merkleRoot: merkle_root.into(),
     };
     env::commit_slice(commit.abi_encode().as_slice());
+}
+
+fn expect_block_hash(block: &Header) -> [u8; 32] {
+    let Hash::Sha256(first_block_hash) = block.hash() else {
+        unreachable!("Header hash should always be a non empty sha256");
+    };
+    first_block_hash
+}
+
+fn expect_sha256_data_hash(header: &Header) -> [u8; 32] {
+    let Some(Hash::Sha256(first_block_hash)) = header.data_hash else {
+        unreachable!("Header data root should always be a non empty sha256");
+    };
+    first_block_hash
 }

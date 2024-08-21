@@ -19,7 +19,4 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 alloy-contract = "0.2"
 alloy-sol-types = "0.7"
 reqwest = "0.12.4"
-serde = { workspace = true }
-serde_json = "1.0"
-serde_with = { version = "3.8", features = ["base64"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }

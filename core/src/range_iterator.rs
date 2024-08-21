@@ -18,7 +18,8 @@ use blobstream0_primitives::{
     proto::{TrustedLightBlock, UntrustedLightBlock},
     LightBlockProveData, DEFAULT_PROVER_OPTS,
 };
-use tendermint_light_client_verifier::{types::Header, ProdVerifier, Verdict};
+use std::time::Duration;
+use tendermint_light_client_verifier::{types::Header, ProdVerifier, Verdict, Verifier};
 use tendermint_rpc::HttpClient;
 
 use crate::{fetch_untrusted_light_block, fetch_validators};
@@ -102,7 +103,9 @@ fn validator_stake_overlap(trusted: &TrustedLightBlock, target: &UntrustedLightB
     let vp = ProdVerifier::default();
     let trusted_state = trusted.as_trusted_state();
     let target_state = target.as_untrusted_state();
-    let verdict =
-        vp.verify_commit_against_trusted(&target_state, &trusted_state, &DEFAULT_PROVER_OPTS);
+
+    // Replicate same validation as done in the guest, to avoid any inconsistencies
+    let time = (target_state.signed_header.header().time + Duration::from_secs(1)).unwrap();
+    let verdict = vp.verify_update_header(target_state, trusted_state, &DEFAULT_PROVER_OPTS, time);
     matches!(verdict, Verdict::Success)
 }

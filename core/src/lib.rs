@@ -14,16 +14,15 @@
 
 use alloy::{network::Network, primitives::TxHash, providers::Provider, transports::Transport};
 use alloy_sol_types::SolValue;
+use anyhow::Context;
 use batch_guest::BATCH_GUEST_ELF;
 use blobstream0_primitives::{
     proto::{TrustedLightBlock, UntrustedLightBlock},
     IBlobstream::{IBlobstreamInstance, RangeCommitment},
-    LightBlockProveData, LightClientCommit,
+    LightBlockProveData,
 };
-use light_client_guest::TM_LIGHT_CLIENT_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, ProverOpts, Receipt};
-use serde_bytes::ByteBuf;
 use std::{ops::Range, sync::Arc};
 use tendermint::{block::Height, validator::Set};
 use tendermint_light_client_verifier::types::Header;
@@ -143,7 +142,8 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
         input.untrusted_height() - input.trusted_height() - 1,
         input.interval_headers.len() as u64
     );
-    let expected_next_hash = input.untrusted_block.signed_header.header().hash();
+    // TODO see below about sanity checks
+    let _expected_next_hash = input.untrusted_block.signed_header.header().hash();
 
     TrustedLightBlock {
         signed_header: input.trusted_block.signed_header,
@@ -175,14 +175,12 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
             .build()?;
 
         let prover = default_prover();
-        prover.prove(env, TM_LIGHT_CLIENT_ELF)
+        prover.prove_with_opts(env, BATCH_GUEST_ELF, &ProverOpts::groth16())
     })
     .await??;
     let receipt = prove_info.receipt;
 
-    let commit: LightClientCommit = receipt.journal.decode()?;
-    // Assert that the data root equals what is committed from the proof.
-    assert_eq!(expected_next_hash.as_bytes(), &commit.next_block_hash);
+    // TODO make assertions about the proof for sanity?
 
     Ok(receipt)
 }
@@ -193,8 +191,6 @@ pub async fn prove_block_range(
     client: Arc<HttpClient>,
     range: Range<u64>,
 ) -> anyhow::Result<Receipt> {
-    let prover = default_prover();
-
     // Include fetching the trusted light client block from before the range.
     let (trusted_block, blocks) = tokio::try_join!(
         fetch_trusted_light_block(&client, Height::try_from(range.start - 1)?),
@@ -207,27 +203,15 @@ pub async fn prove_block_range(
         blocks: &blocks,
     };
 
-    let mut batch_env_builder = ExecutorEnv::builder();
-    let mut batch_receipts = Vec::new();
-    while let Some(inputs) = range_iterator.next_range().await? {
-        // TODO this will likely have to check chain height and wait for new block to be published
-        //      or have a separate function do this.
-        let receipt = prove_block(inputs).await?;
+    let inputs = range_iterator
+        .next_range()
+        .await?
+        .context("unable to prove any blocks in the range")?;
+    // TODO this will likely have to check chain height and wait for new block to be published
+    //      or have a separate function do this.
+    let receipt = prove_block(inputs).await?;
 
-        batch_receipts.push(ByteBuf::from(receipt.journal.bytes.clone()));
-        batch_env_builder.add_assumption(receipt);
-    }
-
-    let env = batch_env_builder.write(&batch_receipts)?.build()?;
-
-    // Note: must block in place to not have issues with Bonsai blocking client when selected
-    tracing::debug!(target: "blobstream0::core", "Proving batch of blocks");
-    // TODO likely better to move this to a spawn blocking, prover and env types not compat, messy
-    let prove_info = tokio::task::block_in_place(move || {
-        prover.prove_with_opts(env, BATCH_GUEST_ELF, &ProverOpts::groth16())
-    })?;
-
-    Ok(prove_info.receipt)
+    Ok(receipt)
 }
 
 /// Post batch proof to Eth based chain.

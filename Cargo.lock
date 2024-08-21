@@ -1073,7 +1073,6 @@ dependencies = [
  "anyhow",
  "batch-guest",
  "blobstream0-primitives",
- "light-client-guest",
  "risc0-ethereum-contracts",
  "risc0-zkvm",
  "serde_bytes",
@@ -1093,9 +1092,6 @@ dependencies = [
  "alloy-sol-types",
  "prost 0.12.6",
  "prost-types",
- "serde",
- "serde_bytes",
- "serde_with",
  "sha2 0.10.8 (git+https://github.com/risc0/RustCrypto-hashes?tag=sha2-v0.10.8-risczero.0)",
  "tendermint",
  "tendermint-light-client-verifier",
@@ -3088,13 +3084,6 @@ checksum = "c0ff37bd590ca25063e35af745c343cb7a0271906fb7b37e4813e8f79f00268d"
 dependencies = [
  "bitflags 2.6.0",
  "libc",
-]
-
-[[package]]
-name = "light-client-guest"
-version = "0.1.0"
-dependencies = [
- "risc0-build",
 ]
 
 [[package]]
