@@ -142,8 +142,8 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
         input.untrusted_height() - input.trusted_height() - 1,
         input.interval_headers.len() as u64
     );
-    // TODO see below about sanity checks
-    let _expected_next_hash = input.untrusted_block.signed_header.header().hash();
+    let expected_next_hash = input.untrusted_block.signed_header.header().hash();
+    let expected_next_height = input.untrusted_height();
 
     TrustedLightBlock {
         signed_header: input.trusted_block.signed_header,
@@ -179,8 +179,10 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     })
     .await??;
     let receipt = prove_info.receipt;
-
-    // TODO make assertions about the proof for sanity?
+    let commitment = RangeCommitment::abi_decode(&receipt.journal.bytes, true)?;
+    // Assert that what is proven is expected based on the inputs.
+    assert_eq!(expected_next_hash.as_bytes(), commitment.newHeaderHash);
+    assert_eq!(expected_next_height, commitment.newHeight);
 
     Ok(receipt)
 }
