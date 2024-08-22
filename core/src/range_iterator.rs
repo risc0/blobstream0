@@ -15,10 +15,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use blobstream0_primitives::{
+    light_client_verify,
     proto::{TrustedLightBlock, UntrustedLightBlock},
-    LightBlockProveData, DEFAULT_PROVER_OPTS,
+    LightBlockProveData,
 };
-use tendermint_light_client_verifier::{types::Header, ProdVerifier, Verdict};
+use tendermint_light_client_verifier::{types::Header, Verdict};
 use tendermint_rpc::HttpClient;
 
 use crate::{fetch_untrusted_light_block, fetch_validators};
@@ -99,10 +100,6 @@ impl LightBlockRangeIterator<'_> {
 }
 
 fn validator_stake_overlap(trusted: &TrustedLightBlock, target: &UntrustedLightBlock) -> bool {
-    let vp = ProdVerifier::default();
-    let trusted_state = trusted.as_trusted_state();
-    let target_state = target.as_untrusted_state();
-    let verdict =
-        vp.verify_commit_against_trusted(&target_state, &trusted_state, &DEFAULT_PROVER_OPTS);
-    matches!(verdict, Verdict::Success)
+    // Replicate same validation as done in the guest, to avoid any inconsistencies
+    matches!(light_client_verify(trusted, target), Verdict::Success)
 }
