@@ -7,8 +7,8 @@ edition = "2021"
 alloy = { version = "0.2", features = ["node-bindings", "network", "providers", "transports", "signer-local"] }
 alloy-sol-types = { version = "0.7", features = ["json"] }
 anyhow = "1.0"
-light-client-guest = { path = "../light-client-guest" }
 blobstream0-primitives = { path = "../primitives" }
+light-client-guest = { path = "../light-client-guest" }
 risc0-ethereum-contracts = { git = "https://github.com/risc0/risc0-ethereum", tag = "v1.0.0" }
 risc0-zkvm = { version = "=1.0.5" }
 serde_bytes = "0.11"

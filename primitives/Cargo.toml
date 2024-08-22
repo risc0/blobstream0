@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+alloy-primitives = "0.7"
 alloy-sol-types = { version = "0.7", features = ["json"] }
 prost = { version = "0.12", default-features = false }
 prost-types = { version = "0.12", default-features = false }

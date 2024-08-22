@@ -1080,6 +1080,7 @@ name = "blobstream0-primitives"
 version = "0.1.0"
 dependencies = [
  "alloy-contract",
+ "alloy-primitives",
  "alloy-sol-types",
  "prost 0.12.6",
  "prost-types",

@@ -784,6 +784,7 @@ name = "blobstream0-primitives"
 version = "0.1.0"
 dependencies = [
  "alloy-contract",
+ "alloy-primitives",
  "alloy-sol-types",
  "prost 0.12.6",
  "prost-types",
@@ -1535,7 +1536,6 @@ checksum = "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
 name = "light-client-guest"
 version = "0.1.0"
 dependencies = [
- "alloy-primitives",
  "alloy-sol-types",
  "blobstream0-primitives",
  "risc0-zkvm",

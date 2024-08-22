@@ -13,11 +13,16 @@
 // limitations under the License.
 
 use abi::IBlobstream::DataRootTuple;
+use alloy_primitives::U256;
 use alloy_sol_types::SolValue;
+use proto::{TrustedLightBlock, UntrustedLightBlock};
 use sha2::Sha256;
+use std::iter;
 use std::time::Duration;
 use tendermint::merkle::simple_hash_from_byte_vectors;
-use tendermint_light_client_verifier::{options::Options, types::TrustThreshold};
+use tendermint::Hash;
+use tendermint_light_client_verifier::types::{Header, TrustThreshold};
+use tendermint_light_client_verifier::{options::Options, ProdVerifier, Verdict, Verifier};
 
 pub mod proto;
 
@@ -58,7 +63,7 @@ pub type MerkleHash = [u8; 32];
 
 /// Merkle tree implementation for blobstream header proof and validation.
 #[derive(Default)]
-pub struct MerkleTree {
+struct MerkleTree {
     inner: Vec<Vec<u8>>,
 }
 
@@ -71,17 +76,79 @@ impl MerkleTree {
         self.inner.push(bytes)
     }
 
-    /// Construct new merkle tree from all leaves.
-    pub fn from_leaves<'a>(leaves: impl IntoIterator<Item = &'a DataRootTuple>) -> Self {
-        let mut s = Self::default();
-        for leaf in leaves {
-            s.push(leaf);
-        }
-        s
-    }
-
     /// Returns merkle root of tree.
     pub fn root(&mut self) -> MerkleHash {
         simple_hash_from_byte_vectors::<Sha256>(&self.inner)
     }
+}
+
+pub fn build_merkle_root(
+    trusted_block: &TrustedLightBlock,
+    interval_headers: &[Header],
+    untrusted_block: &UntrustedLightBlock,
+) -> [u8; 32] {
+    let mut merkle_tree = MerkleTree::default();
+
+    let trusted_header = trusted_block.signed_header.header();
+    let untrusted_header = untrusted_block.signed_header.header();
+    let mut previous = trusted_header;
+    for header in interval_headers.iter().chain(iter::once(untrusted_header)) {
+        // Check hash links between blocks
+        assert_eq!(
+            header
+                .last_block_id
+                .expect("Header must hash link to previous block")
+                .hash,
+            previous.hash()
+        );
+        previous = header;
+
+        // Push data root of checked header.
+        merkle_tree.push(&DataRootTuple {
+            height: U256::from(header.height.value()),
+            dataRoot: expect_sha256_data_hash(header).into(),
+        });
+    }
+
+    merkle_tree.root()
+}
+
+pub fn light_client_verify(
+    trusted_block: &TrustedLightBlock,
+    untrusted_block: &UntrustedLightBlock,
+) -> Verdict {
+    let vp = ProdVerifier::default();
+
+    let trusted_state = trusted_block.as_trusted_state();
+    let untrusted_state = untrusted_block.as_untrusted_state();
+
+    // Check the next_validators hash, as verify_update_header leaves it for caller to check.
+    assert_eq!(
+        trusted_state.next_validators.hash(),
+        trusted_state.next_validators_hash
+    );
+
+    // This verify time picked pretty arbitrarily, need to be after header time and within
+    // trusting window.
+    let verify_time = untrusted_block.signed_header.header().time + Duration::from_secs(1);
+    vp.verify_update_header(
+        untrusted_state,
+        trusted_state,
+        &DEFAULT_PROVER_OPTS,
+        verify_time.unwrap(),
+    )
+}
+
+pub fn expect_block_hash(block: &Header) -> [u8; 32] {
+    let Hash::Sha256(first_block_hash) = block.hash() else {
+        unreachable!("Header hash should always be a non empty sha256");
+    };
+    first_block_hash
+}
+
+fn expect_sha256_data_hash(header: &Header) -> [u8; 32] {
+    let Some(Hash::Sha256(first_block_hash)) = header.data_hash else {
+        unreachable!("Header data root should always be a non empty sha256");
+    };
+    first_block_hash
 }
