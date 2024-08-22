@@ -15,9 +15,7 @@
 use alloy_sol_types::SolValue;
 use blobstream0_primitives::proto::{TrustedLightBlock, UntrustedLightBlock};
 use blobstream0_primitives::IBlobstream::RangeCommitment;
-use blobstream0_primitives::{
-    build_merkle_root, expect_block_hash, light_client_verify,
-};
+use blobstream0_primitives::{build_merkle_root, expect_block_hash, light_client_verify};
 use risc0_zkvm::guest::env;
 use tendermint_light_client_verifier::{types::Header, Verdict};
 use tendermint_proto::Protobuf;
