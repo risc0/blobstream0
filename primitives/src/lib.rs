@@ -49,7 +49,7 @@ mod prove_data;
 pub use prove_data::LightBlockProveData;
 
 /// Default options for validating Tendermint light client block transitions.
-pub const DEFAULT_PROVER_OPTS: Options = Options {
+const DEFAULT_PROVER_OPTS: Options = Options {
     // Trust threshold overriden to match security used by IBC default
     // See context https://github.com/informalsystems/hermes/issues/2876
     trust_threshold: TrustThreshold::TWO_THIRDS,
@@ -68,25 +68,24 @@ struct MerkleTree {
 }
 
 impl MerkleTree {
+    /// Pushes the encoded [DataRootTuple] to the merkle tree.
     pub fn push(&mut self, element: &DataRootTuple) {
-        self.push_raw(element.abi_encode());
+        self.inner.push(element.abi_encode());
     }
 
-    pub fn push_raw(&mut self, bytes: Vec<u8>) {
-        self.inner.push(bytes)
-    }
-
-    /// Returns merkle root of tree.
+    /// Computes and returns the merkle root of tree.
     pub fn root(&mut self) -> MerkleHash {
         simple_hash_from_byte_vectors::<Sha256>(&self.inner)
     }
 }
 
+/// Calculates merkle root of all new blocks proven. This includes the untrusted header and all
+/// interval headers since the trusted block.
 pub fn build_merkle_root(
     trusted_block: &TrustedLightBlock,
     interval_headers: &[Header],
     untrusted_block: &UntrustedLightBlock,
-) -> [u8; 32] {
+) -> MerkleHash {
     let mut merkle_tree = MerkleTree::default();
 
     let trusted_header = trusted_block.signed_header.header();
@@ -113,6 +112,7 @@ pub fn build_merkle_root(
     merkle_tree.root()
 }
 
+/// Verify light client transition from trusted block to untrusted.
 pub fn light_client_verify(
     trusted_block: &TrustedLightBlock,
     untrusted_block: &UntrustedLightBlock,
@@ -139,16 +139,18 @@ pub fn light_client_verify(
     )
 }
 
+/// Convenience function to pull the block hash data, assuming a Sha256 hash.
 pub fn expect_block_hash(block: &Header) -> [u8; 32] {
-    let Hash::Sha256(first_block_hash) = block.hash() else {
+    let Hash::Sha256(hash) = block.hash() else {
         unreachable!("Header hash should always be a non empty sha256");
     };
-    first_block_hash
+    hash
 }
 
+/// Convenience function to pull the header's data hash, assuming a Sha256 hash.
 fn expect_sha256_data_hash(header: &Header) -> [u8; 32] {
-    let Some(Hash::Sha256(first_block_hash)) = header.data_hash else {
+    let Some(Hash::Sha256(hash)) = header.data_hash else {
         unreachable!("Header data root should always be a non empty sha256");
     };
-    first_block_hash
+    hash
 }

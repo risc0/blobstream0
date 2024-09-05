@@ -22,6 +22,8 @@ use tendermint_light_client_verifier::types::{
 };
 use tendermint_proto::{types::LightBlock as ProtoLightBlock, Protobuf};
 
+/// Wrapper type around [SignedHeader] and its respective next [ValidatorSet] necessary to validate
+/// a light client transition against.
 #[derive(Clone, Debug)]
 pub struct TrustedLightBlock {
     pub signed_header: SignedHeader,
@@ -70,6 +72,10 @@ impl TrustedLightBlock {
     }
 }
 
+/// Wrapper type around [SignedHeader] and its respective [ValidatorSet] used as the target to
+/// validate towards from [TrustedLightBlock].
+/// 
+/// Used in [light_client_verify](crate::light_client_verify).
 #[derive(Clone, Debug)]
 pub struct UntrustedLightBlock {
     pub signed_header: SignedHeader,
