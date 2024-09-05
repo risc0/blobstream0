@@ -109,13 +109,10 @@ where
                 "Contract height: {eth_verified_height}, tendermint height: {tm_height}"
             );
 
-            // TODO can prove proactively, this is very basic impl
             let range_start = eth_verified_height + 1;
             let block_target = range_start + self.batch_size;
             if block_target > tm_height {
                 // Underestimating wait time, it's cheap to fetch current state.
-                // TODO Make this more sophisticated when
-                //      https://github.com/risc0/blobstream0/issues/19 implemented
                 let wait_time = 10 + (3 * (block_target - tm_height));
                 tracing::info!(
                     target: "blobstream0::service",

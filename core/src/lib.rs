@@ -209,8 +209,6 @@ pub async fn prove_block_range(
         .next_range()
         .await?
         .context("unable to prove any blocks in the range")?;
-    // TODO this will likely have to check chain height and wait for new block to be published
-    //      or have a separate function do this.
     let receipt = prove_block(inputs).await?;
 
     Ok(receipt)

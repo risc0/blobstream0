@@ -32,17 +32,14 @@ use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 mod service;
 
-// TODO elsewhere if keeping dev mode deploy through CLI
 sol!(
     #[sol(rpc)]
     MockVerifier,
-    // TODO probably not ideal to reference build directory, fine for now.
     "../contracts/out/RiscZeroMockVerifier.sol/RiscZeroMockVerifier.json"
 );
 sol!(
     #[sol(rpc)]
     RiscZeroGroth16Verifier,
-    // TODO probably not ideal to reference build directory, fine for now.
     "../contracts/out/RiscZeroGroth16Verifier.sol/RiscZeroGroth16Verifier.json"
 );
 
