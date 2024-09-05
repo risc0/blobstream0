@@ -21,6 +21,7 @@ use tendermint_light_client_verifier::{types::Header, Verdict};
 use tendermint_proto::Protobuf;
 
 fn main() {
+    // Deserialize inputs from host.
     let mut len: u32 = 0;
     env::read_slice(core::slice::from_mut(&mut len));
     let mut buf = vec![0; len as usize];
@@ -43,9 +44,10 @@ fn main() {
             .unwrap();
         interval_headers.push(header);
     }
-    // Assert all bytes have been read, as a sanity check
+    // Assert all bytes have been read, as a sanity check.
     assert!(cursor.is_empty());
 
+    // Build merkle root, while also verifying hash links between all blocks.
     let merkle_root = build_merkle_root(&trusted_block, &interval_headers, &untrusted_block);
 
     // Verify the light client transition to untrusted block
@@ -56,6 +58,7 @@ fn main() {
         verdict
     );
 
+    // Commit ABI encoded data to journal to use in contract.
     let commit = RangeCommitment {
         trustedHeaderHash: expect_block_hash(trusted_block.signed_header.header()).into(),
         newHeight: untrusted_block.signed_header.header.height.value(),
