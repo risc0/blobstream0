@@ -41,7 +41,6 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     event HeadUpdate(uint64 blockNumber, bytes32 headerHash);
 
     /// @notice Target height for next batch was below the current height.
-    // TODO the window is bounded at the program level, do we want to constrain it at the contract level too?
     error InvalidTargetHeight();
 
     /// @notice Trusted block hash does not equal the commitment from the new batch.
@@ -60,11 +59,11 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     uint256 public proofNonce;
 
     /// @notice The latest height validated.
-    // TODO the DataRootTuple has the height as a u256, but it should only be uint64. Verify this is fine.
+    /// @dev this value is 64 bits as is the max for heights in Tendermint.
     uint64 public latestHeight;
 
     /// @notice The latest block hash validated.
-    /// @dev always update this in tandem with
+    /// @dev always update this in tandem with `latestHeight`
     // TODO product test if useful to store historical hashes since they are already available?
     bytes32 public latestBlockHash;
 
@@ -113,12 +112,12 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
         emit DataCommitmentStored(proofNonce, latestHeight, _commit.newHeight, _commit.merkleRoot);
 
         // Update latest block in state
-        // TODO explore abstracting this away when gas measured (safety).
         latestHeight = _commit.newHeight;
         latestBlockHash = _commit.newHeaderHash;
+        emit HeadUpdate(latestHeight, latestBlockHash);
 
-        // TODO I would love to just have this nonce be instead a block hash of the last block in
-        //      the batch. Possible?
+        // Set merkle root to monotomically increasing nonce. This is kept as is for compatibility
+        // with alternative versions.
         merkleRoots[proofNonce] = _commit.merkleRoot;
         proofNonce++;
     }
