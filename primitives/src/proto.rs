@@ -74,7 +74,7 @@ impl TrustedLightBlock {
 
 /// Wrapper type around [SignedHeader] and its respective [ValidatorSet] used as the target to
 /// validate towards from [TrustedLightBlock].
-/// 
+///
 /// Used in [light_client_verify](crate::light_client_verify).
 #[derive(Clone, Debug)]
 pub struct UntrustedLightBlock {

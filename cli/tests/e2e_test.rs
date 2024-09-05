@@ -35,7 +35,7 @@ sol!(
     "../contracts/out/RiscZeroMockVerifier.sol/RiscZeroMockVerifier.json"
 );
 
-const CELESTIA_RPC_URL: &str = "https://rpc.celestia-mocha.com";
+const CELESTIA_RPC_URL: &str = "https://celestia-testnet.brightlystake.com";
 
 const BATCH_START: u64 = 10;
 const BATCH_END: u64 = 42;
