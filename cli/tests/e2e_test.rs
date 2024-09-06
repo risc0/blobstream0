@@ -270,7 +270,9 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
         // NOTE: This is abi encoded hex??
         row_roots: Vec<Vec<u8>>,
         proofs: Vec<BinaryMerkleProofJson>,
+        // TODO this is unused.
         start_row: u64,
+        // TODO this is unused.
         end_row: u64,
     }
 
@@ -282,6 +284,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
         #[serde_as(as = "DisplayFromStr")]
         index: u64,
         #[serde_as(as = "Base64")]
+        // TODO this is unused.
         leaf_hash: Vec<u8>,
         #[serde_as(as = "Vec<Base64>")]
         aunts: Vec<[u8; 32]>,
