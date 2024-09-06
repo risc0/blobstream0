@@ -16,11 +16,19 @@
 
 pragma solidity ^0.8.20;
 
-import {RiscZeroMockVerifier} from "risc0/test/RiscZeroMockVerifier.sol";
-import {RiscZeroGroth16Verifier} from "risc0/groth16/RiscZeroGroth16Verifier.sol";
+import {IDAOracle} from "blobstream/IDAOracle.sol";
+import {DAVerifier, SharesProof} from "blobstream/lib/verifier/DAVerifier.sol";
 
-contract Blobstream0Test {
-    // NOTE: These are only used to build these contracts to be used for the CLI and tests, ignore
-    RiscZeroGroth16Verifier a;
-    RiscZeroMockVerifier b;
+contract ShareLoader {
+    IDAOracle public blobstream0;
+
+    constructor(address _blobstream0) {
+        blobstream0 = IDAOracle(_blobstream0);
+    }
+
+    function verifyShares(
+        SharesProof memory _proof
+    ) public view returns (bool, DAVerifier.ErrorCodes) {
+        return DAVerifier.verifySharesToDataRootTupleRoot(blobstream0, _proof);
+    }
 }

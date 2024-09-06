@@ -61,7 +61,7 @@ fn main() {
 
     // Rebuild contracts after generating image ID to avoid inconsistencies.
     Command::new("forge")
-        .args(["build", "--silent"])
+        .args(["build", "--silent", "--via-ir"])
         .current_dir(&contracts_dir)
         .status()
         .unwrap();
