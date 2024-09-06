@@ -42,8 +42,11 @@ mod abi {
         IBlobstream,
         "../contracts/artifacts/Blobstream0.json"
     );
+
+    sol!("../contracts/src/RangeCommitment.sol");
 }
 pub use abi::IBlobstream;
+pub use abi::RangeCommitment;
 
 mod prove_data;
 pub use prove_data::LightBlockProveData;
