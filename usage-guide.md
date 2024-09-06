@@ -26,7 +26,7 @@ Start the service:
 
 ```
 RISC0_DEV_MODE=true RUST_LOG=blobstream0=debug,info cargo run -p blobstream0 -- service \
-	--tendermint-rpc https://rpc.celestia-mocha.com \
+	--tendermint-rpc https://celestia-testnet.brightlystake.com \
 	--eth-rpc http://127.0.0.1:8545/ \
 	--eth-address 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
@@ -81,7 +81,7 @@ Run the service with `RISC0_DEV_MODE=true` if you chose the mock verifier.
 
 ```
 RUST_LOG=blobstream0=debug,info cargo run -p blobstream0 --release -- service \
-	--tendermint-rpc https://rpc.celestia-mocha.com \
+	--tendermint-rpc https://celestia-testnet.brightlystake.com \
 	--eth-rpc https://ethereum-sepolia-rpc.publicnode.com \
 	--eth-address <BLOBSTREAM ADDRESS FROM DEPLOY> \
 	--private-key-hex <ADD KEY HERE> \

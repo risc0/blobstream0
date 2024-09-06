@@ -56,6 +56,8 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     ///         (in this case, checking if a number is even) are considered valid.
     bytes32 public imageId = ImageID.LIGHT_CLIENT_GUEST_ID;
 
+    /// @notice nonce for mapping block ranges to block merkle roots. This value is used as the key
+    ///         to insert new roots in `merkleRoots`.
     uint256 public proofNonce;
 
     /// @notice The latest height validated.
@@ -78,6 +80,8 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
         latestBlockHash = _trustedHash;
         latestHeight = _trustedHeight;
 
+        // Proof nonce initialized as 1 to maintain compatibility with existing implementations and
+        // avoid default value confusion.
         proofNonce = 1;
     }
 
@@ -98,27 +102,28 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     }
 
     /// @notice Validate a proof of a new header range, update state.
-    function updateRange(RangeCommitment memory _commit, bytes calldata _seal) external {
-        if (_commit.newHeight <= latestHeight) {
+    function updateRange(bytes calldata _commitBytes, bytes calldata _seal) external {
+        RangeCommitment memory commit = abi.decode(_commitBytes, (RangeCommitment));
+
+        if (commit.newHeight <= latestHeight) {
             revert InvalidTargetHeight();
         }
-        if (_commit.trustedHeaderHash != latestBlockHash) {
+        if (commit.trustedHeaderHash != latestBlockHash) {
             revert InvalidTrustedHeaderHash();
         }
-
-        bytes memory journal = abi.encode(_commit);
+        bytes memory journal = abi.encode(commit);
         verifier.verify(_seal, imageId, sha256(journal));
 
-        emit DataCommitmentStored(proofNonce, latestHeight, _commit.newHeight, _commit.merkleRoot);
+        emit DataCommitmentStored(proofNonce, latestHeight, commit.newHeight, commit.merkleRoot);
 
         // Update latest block in state
-        latestHeight = _commit.newHeight;
-        latestBlockHash = _commit.newHeaderHash;
+        latestHeight = commit.newHeight;
+        latestBlockHash = commit.newHeaderHash;
         emit HeadUpdate(latestHeight, latestBlockHash);
 
         // Set merkle root to monotomically increasing nonce. This is kept as is for compatibility
         // with alternative versions.
-        merkleRoots[proofNonce] = _commit.merkleRoot;
+        merkleRoots[proofNonce] = commit.merkleRoot;
         proofNonce++;
     }
 

@@ -17,8 +17,8 @@ use alloy_sol_types::SolValue;
 use anyhow::Context;
 use blobstream0_primitives::{
     proto::{TrustedLightBlock, UntrustedLightBlock},
-    IBlobstream::{IBlobstreamInstance, RangeCommitment},
-    LightBlockProveData,
+    IBlobstream::IBlobstreamInstance,
+    LightBlockProveData, RangeCommitment,
 };
 use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
 use risc0_ethereum_contracts::groth16;
@@ -231,10 +231,8 @@ where
         false => groth16::encode(receipt.inner.groth16()?.seal.clone())?,
     };
 
-    let range_commitment = RangeCommitment::abi_decode(&receipt.journal.bytes, true)?;
-
     let res = contract
-        .updateRange(range_commitment, seal.into())
+        .updateRange(receipt.journal.bytes.clone().into(), seal.into())
         .send()
         .await?
         .watch()
