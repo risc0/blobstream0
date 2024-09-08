@@ -17,25 +17,12 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use alloy::{network::Network, primitives::FixedBytes, providers::Provider, transports::Transport};
+use anyhow::Context;
 use blobstream0_core::{post_batch, prove_block_range};
 use blobstream0_primitives::IBlobstream::IBlobstreamInstance;
 use rand::Rng;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::task::JoinError;
-
-macro_rules! log_failure {
-    ($res:expr, $($arg:tt)*) => {{
-        let res = $res;
-        if let Err(e) = &res {
-            tracing::warn!(
-                target: "blobstream0::service",
-                $($arg)*,
-                e,
-            );
-        }
-        res
-    }}
-}
 
 pub(crate) struct BlobstreamService<T, P, N> {
     contract: Arc<IBlobstreamInstance<T, P, N>>,
@@ -101,10 +88,11 @@ where
                 tm_height,
                 // TODO check this hash against tm node as sanity check
                 eth_verified_hash: _,
-            } = log_failure!(
-                self.fetch_current_state().await?,
-                "failed to fetch current state: {}"
-            )?;
+            } = self
+                .fetch_current_state()
+                .await?
+                .context("failed to fetch current state")?;
+
             tracing::info!(
                 target: "blobstream0::service",
                 "Contract height: {eth_verified_height}, tendermint height: {tm_height}"
@@ -126,14 +114,12 @@ where
             break (trusted_height, untrusted_height);
         };
 
-        let receipt = log_failure!(
-            prove_block_range(self.tm_client.clone(), trusted_height..untrusted_height).await,
-            "failed to prove block range: {}"
-        )?;
-        log_failure!(
-            post_batch(&self.contract, &receipt).await,
-            "failed to post batch: {}"
-        )?;
+        let receipt = prove_block_range(self.tm_client.clone(), trusted_height..untrusted_height)
+            .await
+            .context("failed to prove block range")?;
+        post_batch(&self.contract, &receipt)
+            .await
+            .context("failed to post batch")?;
 
         // TODO ensure height is updated as a sanity check
         Ok(())
@@ -142,7 +128,18 @@ where
     /// Spawn blobstream service, which will run indefinitely until a fatal error when awaited.
     pub async fn spawn(&self) -> anyhow::Result<()> {
         loop {
-            exponential_backoff(|| async { Ok(self.progress_contract_state().await?) }).await?;
+            exponential_backoff(|| async {
+                let res = self.progress_contract_state().await;
+                if let Err(e) = &res {
+                    tracing::warn!(
+                        target: "blobstream0::service",
+                        "Failed to progress state: {:?}",
+                        e,
+                    );
+                }
+                Ok(res?)
+            })
+            .await?;
         }
     }
 }
