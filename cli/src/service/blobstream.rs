@@ -12,31 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{sync::Arc, time::Duration};
+use std::future::Future;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use alloy::{network::Network, primitives::FixedBytes, providers::Provider, transports::Transport};
 use blobstream0_core::{post_batch, prove_block_range};
 use blobstream0_primitives::IBlobstream::IBlobstreamInstance;
+use rand::Rng;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::task::JoinError;
 
-macro_rules! handle_temporal_result {
-    ($res:expr, $consecutive_failures:expr) => {
-        match $res {
-            Ok(r) => r,
-            Err(e) => {
-                $consecutive_failures += 1;
-                tracing::warn!(
-                    target: "blobstream0::service",
-                    "failed to update contract state: {} (consecutive: {})",
-                    e,
-                    $consecutive_failures
-                );
-                tokio::time::sleep(std::time::Duration::from_secs(15)).await;
-                continue;
-            }
+macro_rules! log_failure {
+    ($res:expr, $($arg:tt)*) => {{
+        let res = $res;
+        if let Err(e) = &res {
+            tracing::warn!(
+                target: "blobstream0::service",
+                $($arg)*,
+                e,
+            );
         }
-    };
+        res
+    }}
 }
 
 pub(crate) struct BlobstreamService<T, P, N> {
@@ -94,51 +92,91 @@ where
         Ok(result())
     }
 
-    /// Spawn blobstream service, which will run indefinitely until a fatal error when awaited.
-    pub async fn spawn(&self) -> anyhow::Result<()> {
-        let mut consecutive_failures = 0;
-        while consecutive_failures < 5 {
+    /// Fetches the current state, generates a proof for a new merkle root, publishes that root.
+    async fn progress_contract_state(&self) -> anyhow::Result<()> {
+        // Poll Tendermint state until enough blocks to generate proof.
+        let (trusted_height, untrusted_height) = loop {
             let BlobstreamState {
                 eth_verified_height,
                 tm_height,
                 // TODO check this hash against tm node as sanity check
                 eth_verified_hash: _,
-            } = handle_temporal_result!(self.fetch_current_state().await?, consecutive_failures);
+            } = log_failure!(
+                self.fetch_current_state().await?,
+                "failed to fetch current state: {}"
+            )?;
             tracing::info!(
                 target: "blobstream0::service",
                 "Contract height: {eth_verified_height}, tendermint height: {tm_height}"
             );
 
-            let range_start = eth_verified_height + 1;
-            let block_target = range_start + self.batch_size;
-            if block_target > tm_height {
+            let trusted_height = eth_verified_height + 1;
+            let untrusted_height = trusted_height + self.batch_size;
+            if untrusted_height > tm_height {
                 // Underestimating wait time, it's cheap to fetch current state.
-                let wait_time = 10 + (3 * (block_target - tm_height));
+                let wait_time = 10 + (3 * (untrusted_height - tm_height));
                 tracing::info!(
                     target: "blobstream0::service",
                     "Not enough tendermint blocks to create batch, waiting {} seconds",
                     wait_time
                 );
-                // Cannot create a batch yet, wait until ready
                 tokio::time::sleep(Duration::from_secs(wait_time)).await;
-                continue;
             }
 
-            let receipt = handle_temporal_result!(
-                prove_block_range(self.tm_client.clone(), range_start..block_target).await,
-                consecutive_failures
-            );
-            handle_temporal_result!(
-                post_batch(&self.contract, &receipt).await,
-                consecutive_failures
-            );
+            break (trusted_height, untrusted_height);
+        };
 
-            consecutive_failures = 0;
+        let receipt = log_failure!(
+            prove_block_range(self.tm_client.clone(), trusted_height..untrusted_height).await,
+            "failed to prove block range: {}"
+        )?;
+        log_failure!(
+            post_batch(&self.contract, &receipt).await,
+            "failed to post batch: {}"
+        )?;
 
-            // TODO ensure height is updated
+        // TODO ensure height is updated as a sanity check
+        Ok(())
+    }
+
+    /// Spawn blobstream service, which will run indefinitely until a fatal error when awaited.
+    pub async fn spawn(&self) -> anyhow::Result<()> {
+        loop {
+            exponential_backoff(|| async { Ok(self.progress_contract_state().await?) }).await?;
         }
+    }
+}
 
-        anyhow::bail!("Reached limit of consecutive errors");
+/// Basic exponential backoff implementation. Async retry libraries caused issues.
+async fn exponential_backoff<F, Fut, T>(mut operation: F) -> anyhow::Result<T>
+where
+    F: FnMut() -> Fut,
+    Fut: Future<Output = anyhow::Result<T>>,
+{
+    let start_time = Instant::now();
+    let initial_interval = Duration::from_secs(1);
+    let max_interval = Duration::from_secs(2 * 60 * 60); // 2 hours
+    let timeout = Duration::from_secs(2 * 24 * 60 * 60); // 2 days
+
+    let mut current_interval = initial_interval;
+    let mut rng = rand::thread_rng();
+
+    loop {
+        match operation().await {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                if start_time.elapsed() >= timeout {
+                    return Err(e);
+                }
+
+                let jitter = rng.gen_range(0..=1000);
+                let sleep_duration = current_interval + Duration::from_millis(jitter);
+
+                tokio::time::sleep(sleep_duration).await;
+
+                current_interval = std::cmp::min(current_interval * 2, max_interval);
+            }
+        }
     }
 }
 

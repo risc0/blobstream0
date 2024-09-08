@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy::{network::Network, primitives::TxHash, providers::Provider, transports::Transport};
+use alloy::{network::Network, providers::Provider, transports::Transport};
 use alloy_sol_types::SolValue;
 use anyhow::Context;
 use blobstream0_primitives::{
@@ -23,7 +23,7 @@ use blobstream0_primitives::{
 use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, ProverOpts, Receipt};
-use std::{ops::Range, sync::Arc};
+use std::{ops::Range, sync::Arc, time::Duration};
 use tendermint::{block::Height, validator::Set};
 use tendermint_light_client_verifier::types::Header;
 use tendermint_proto::{types::Header as ProtoHeader, Protobuf};
@@ -219,7 +219,7 @@ pub async fn prove_block_range(
 pub async fn post_batch<T, P, N>(
     contract: &IBlobstreamInstance<T, P, N>,
     receipt: &Receipt,
-) -> anyhow::Result<TxHash>
+) -> anyhow::Result<()>
 where
     T: Transport + Clone,
     P: Provider<T, N>,
@@ -231,12 +231,13 @@ where
         false => groth16::encode(receipt.inner.groth16()?.seal.clone())?,
     };
 
-    let res = contract
-        .updateRange(receipt.journal.bytes.clone().into(), seal.into())
+    let update_tx = contract.updateRange(receipt.journal.bytes.clone().into(), seal.into());
+    update_tx
         .send()
         .await?
+        .with_timeout(Some(Duration::from_secs(60)))
         .watch()
         .await?;
 
-    Ok(res)
+    Ok(())
 }
