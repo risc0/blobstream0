@@ -109,6 +109,7 @@ where
                     wait_time
                 );
                 tokio::time::sleep(Duration::from_secs(wait_time)).await;
+                continue;
             }
 
             break (trusted_height, untrusted_height);
