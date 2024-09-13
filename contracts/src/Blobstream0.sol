@@ -52,8 +52,7 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     /// @notice Image ID of the only zkVM binary to accept verification from.
     ///         The image ID is similar to the address of a smart contract.
     ///         It uniquely represents the logic of that guest program,
-    ///         ensuring that only proofs generated from a pre-defined guest program
-    ///         (in this case, checking if a number is even) are considered valid.
+    ///         ensuring that only proofs generated from a pre-defined guest program.
     bytes32 public imageId = ImageID.LIGHT_CLIENT_GUEST_ID;
 
     /// @notice nonce for mapping block ranges to block merkle roots. This value is used as the key
@@ -111,8 +110,7 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
         if (commit.trustedHeaderHash != latestBlockHash) {
             revert InvalidTrustedHeaderHash();
         }
-        bytes memory journal = abi.encode(commit);
-        verifier.verify(_seal, imageId, sha256(journal));
+        verifier.verify(_seal, imageId, sha256(_commitBytes));
 
         emit DataCommitmentStored(proofNonce, latestHeight, commit.newHeight, commit.merkleRoot);
 
