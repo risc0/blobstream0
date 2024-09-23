@@ -157,7 +157,8 @@ pub fn generate_bitmap(
                 && untrusted_signature.is_commit()
                 && trusted_signature.validator_address() == untrusted_signature.validator_address()
             {
-                validator_commit_intersection.insert(trusted_signature.validator_address().unwrap());
+                validator_commit_intersection
+                    .insert(trusted_signature.validator_address().unwrap());
             }
         }
     }

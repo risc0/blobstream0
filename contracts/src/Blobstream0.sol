@@ -46,9 +46,7 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     /// @param trustedBlock The trusted block of the block range.
     /// @param targetBlock The target block of the block range.
     /// @param validatorBitmap The validator bitmap for the block range.
-    event ValidatorBitmapEquivocation(
-        uint64 trustedBlock, uint64 targetBlock, uint256 validatorBitmap
-    );
+    event ValidatorBitmapEquivocation(uint64 trustedBlock, uint64 targetBlock, uint256 validatorBitmap);
 
     /// @notice Target height for next batch was below the current height.
     error InvalidTargetHeight();
