@@ -173,7 +173,9 @@ pub fn generate_bitmap(
         .iter()
         .enumerate()
         .fold(U256::ZERO, |mut bitmap, (i, validator)| {
-            if trusted_validators.contains(&validator.address) && untrusted_validators.contains(&validator.address) {
+            if trusted_validators.contains(&validator.address)
+                && untrusted_validators.contains(&validator.address)
+            {
                 bitmap.set_bit(i, true);
             }
             bitmap
