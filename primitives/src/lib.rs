@@ -145,7 +145,7 @@ pub fn light_client_verify(
     )
 }
 
-fn collect_validator_addresses(signed_header: &SignedHeader) -> BTreeSet<Id> {
+fn commitment_signature_addresses(signed_header: &SignedHeader) -> BTreeSet<Id> {
     signed_header
         .commit
         .signatures
@@ -161,8 +161,8 @@ pub fn generate_bitmap(
     untrusted_block: &UntrustedLightBlock,
 ) -> U256 {
     // Create sets of validator addresses that have signed each block
-    let trusted_validators = collect_validator_addresses(&trusted_block.signed_header);
-    let untrusted_validators = collect_validator_addresses(&untrusted_block.signed_header);
+    let trusted_validators = commitment_signature_addresses(&trusted_block.signed_header);
+    let untrusted_validators = commitment_signature_addresses(&untrusted_block.signed_header);
 
     // Construct the validator bitmap.
     trusted_block
