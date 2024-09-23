@@ -20,6 +20,8 @@ use sha2::Sha256;
 use std::collections::BTreeSet;
 use std::iter;
 use std::time::Duration;
+use tendermint::account::Id;
+use tendermint::block::signed_header::SignedHeader;
 use tendermint::merkle::simple_hash_from_byte_vectors;
 use tendermint::Hash;
 use tendermint_light_client_verifier::types::{Header, TrustThreshold};
@@ -143,6 +145,15 @@ pub fn light_client_verify(
     )
 }
 
+fn collect_validator_addresses(signed_header: &SignedHeader) -> BTreeSet<Id> {
+    signed_header
+        .commit
+        .signatures
+        .iter()
+        .filter_map(|sig| sig.is_commit().then(|| sig.validator_address().unwrap()))
+        .collect()
+}
+
 /// Generates a bitmap of the validators that have signed both headers. The ordering is based on the
 /// trusted block's validator set ordering.
 pub fn generate_bitmap(
@@ -150,21 +161,8 @@ pub fn generate_bitmap(
     untrusted_block: &UntrustedLightBlock,
 ) -> U256 {
     // Create sets of validator addresses that have signed each block
-    let trusted_validators: BTreeSet<_> = trusted_block
-        .signed_header
-        .commit
-        .signatures
-        .iter()
-        .filter_map(|sig| sig.is_commit().then(|| sig.validator_address().unwrap()))
-        .collect();
-
-    let untrusted_validators: BTreeSet<_> = untrusted_block
-        .signed_header
-        .commit
-        .signatures
-        .iter()
-        .filter_map(|sig| sig.is_commit().then(|| sig.validator_address().unwrap()))
-        .collect();
+    let trusted_validators = collect_validator_addresses(&trusted_block.signed_header);
+    let untrusted_validators = collect_validator_addresses(&untrusted_block.signed_header);
 
     // Construct the validator bitmap.
     trusted_block
