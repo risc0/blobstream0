@@ -13,11 +13,7 @@
 // limitations under the License.
 
 use alloy::{
-    hex::FromHex,
-    network::EthereumWallet,
-    node_bindings::Anvil,
-    primitives::{FixedBytes, U256},
-    providers::ProviderBuilder,
+    network::EthereumWallet, node_bindings::Anvil, primitives::U256, providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
 use alloy_sol_types::sol;
@@ -27,7 +23,7 @@ use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as, DisplayFromStr};
 use std::sync::Arc;
-use tendermint_rpc::HttpClient;
+use tendermint_rpc::{Client, HttpClient};
 
 sol!(
     #[sol(rpc)]
@@ -37,9 +33,9 @@ sol!(
 
 const CELESTIA_RPC_URL: &str = "https://celestia-testnet.brightlystake.com";
 
-const BATCH_START: u64 = 10;
-const BATCH_END: u64 = 42;
-const PROOF_HEIGHT: u64 = 15;
+const BATCH_START: u32 = 2768370;
+const BATCH_END: u32 = 2768400;
+const PROOF_HEIGHT: u32 = 2768375;
 
 /// Type matches Celestia API endpoint for generating proof.
 /// https://docs.celestia.org/developers/blobstream-proof-queries#_1-data-root-inclusion-proof
@@ -78,27 +74,34 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
 
     let verifier = MockVerifier::deploy(&provider, [0, 0, 0, 0].into()).await?;
 
+    let tm_client = Arc::new(HttpClient::new(CELESTIA_RPC_URL)?);
+    let trusted_block_hash = tm_client
+        .header(BATCH_START - 1)
+        .await?
+        .header
+        .hash()
+        .as_bytes()
+        .try_into()
+        .unwrap();
+
     // Deploy the contract.
     let contract = IBlobstream::deploy(
         &provider,
         anvil.addresses()[0],
         verifier.address().clone(),
         // Uses Celestia block hash at height below proving range on Mocha
-        FixedBytes::<32>::from_hex(
-            "5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B",
-        )?,
-        BATCH_START - 1,
+        trusted_block_hash,
+        BATCH_START as u64 - 1,
     )
     .await?;
 
-    let client = Arc::new(HttpClient::new(CELESTIA_RPC_URL)?);
-
-    let receipt = prove_block_range(client, BATCH_START..BATCH_END).await?;
+    let receipt =
+        prove_block_range(tm_client.clone(), BATCH_START as u64..BATCH_END as u64).await?;
 
     post_batch(&contract, &receipt).await?;
 
     let height = contract.latestHeight().call().await?;
-    assert_eq!(height._0, BATCH_END - 1);
+    assert_eq!(height._0, BATCH_END as u64 - 1);
 
     // Somewhat hacky to do this manually, seems no Rust tooling for this endpoint.
     let http_client = reqwest::Client::new();
@@ -115,6 +118,15 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     let response: DataRootInclusionResponse =
         serde_json::from_value(response["result"]["proof"].clone())?;
 
+    let proof_data_root = tm_client
+        .header(PROOF_HEIGHT)
+        .await?
+        .header
+        .data_hash
+        .unwrap()
+        .as_bytes()
+        .try_into()
+        .unwrap();
     // Validate data root inclusion.
     let is_valid = contract
         .verifyAttestation(
@@ -122,9 +134,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
             DataRootTuple {
                 height: U256::from(PROOF_HEIGHT),
                 // TODO this is fixed from on chain, but could be pulled from node to be dynamic
-                dataRoot: FixedBytes::<32>::from_hex(
-                    "3D96B7D238E7E0456F6AF8E7CDF0A67BD6CF9C2089ECB559C659DCAA1F880353",
-                )?,
+                dataRoot: proof_data_root,
             },
             BinaryMerkleProof {
                 sideNodes: response
