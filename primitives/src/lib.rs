@@ -17,6 +17,7 @@ use alloy_primitives::U256;
 use alloy_sol_types::SolValue;
 use proto::{TrustedLightBlock, UntrustedLightBlock};
 use sha2::Sha256;
+use std::collections::BTreeSet;
 use std::iter;
 use std::time::Duration;
 use tendermint::merkle::simple_hash_from_byte_vectors;
@@ -140,6 +141,40 @@ pub fn light_client_verify(
         &DEFAULT_PROVER_OPTS,
         verify_time.unwrap(),
     )
+}
+
+/// Generates a bitmap of the validators that have signed both headers. The ordering is based on the
+/// trusted block's validator set ordering.
+pub fn generate_bitmap(
+    trusted_block: &TrustedLightBlock,
+    untrusted_block: &UntrustedLightBlock,
+) -> U256 {
+    // Find the intersection of validators that have signed both headers.
+    let mut validator_commit_intersection = BTreeSet::new();
+    for trusted_signature in trusted_block.signed_header.commit.signatures.iter() {
+        for untrusted_signature in untrusted_block.signed_header.commit.signatures.iter() {
+            if trusted_signature.is_commit()
+                && untrusted_signature.is_commit()
+                && trusted_signature.validator_address() == untrusted_signature.validator_address()
+            {
+                validator_commit_intersection.insert(trusted_signature.validator_address().unwrap());
+            }
+        }
+    }
+
+    // Construct the validator bitmap.
+    let mut validator_bitmap = U256::ZERO;
+    for (i, validator) in trusted_block
+        .next_validators
+        .validators()
+        .iter()
+        .enumerate()
+    {
+        if validator_commit_intersection.contains(&validator.address) {
+            validator_bitmap.set_bit(i, true);
+        }
+    }
+    validator_bitmap
 }
 
 /// Convenience function to pull the block hash data, assuming a Sha256 hash.

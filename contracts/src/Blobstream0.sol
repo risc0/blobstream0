@@ -40,6 +40,16 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     /// NOTE: Matches existing Blobstream contract, for ease of integration.
     event HeadUpdate(uint64 blockNumber, bytes32 headerHash);
 
+    /// @notice Validator bitmap of the intersection of validators that signed off on both the
+    /// trusted block and the new header. This event is emitted to allow for slashing equivocations.
+    /// NOTE: This event matches existing Blobstream contracts, for ease of integration.
+    /// @param trustedBlock The trusted block of the block range.
+    /// @param targetBlock The target block of the block range.
+    /// @param validatorBitmap The validator bitmap for the block range.
+    event ValidatorBitmapEquivocation(
+        uint64 trustedBlock, uint64 targetBlock, uint256 validatorBitmap
+    );
+
     /// @notice Target height for next batch was below the current height.
     error InvalidTargetHeight();
 
@@ -113,6 +123,7 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
         verifier.verify(_seal, imageId, sha256(_commitBytes));
 
         emit DataCommitmentStored(proofNonce, latestHeight, commit.newHeight, commit.merkleRoot);
+        emit ValidatorBitmapEquivocation(latestHeight, commit.newHeight, commit.validatorBitmap);
 
         // Update latest block in state
         latestHeight = commit.newHeight;

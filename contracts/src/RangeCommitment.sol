@@ -24,4 +24,5 @@ struct RangeCommitment {
     uint64 newHeight;
     bytes32 newHeaderHash;
     bytes32 merkleRoot;
+    uint256 validatorBitmap;
 }
