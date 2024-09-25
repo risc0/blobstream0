@@ -85,7 +85,10 @@ contract Blobstream0 is IDAOracle, Initializable, UUPSUpgradeable, Ownable2StepU
     /// @dev DO NOT REMOVE! It is mandatory for upgradability.
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function initialize(address _admin, IRiscZeroVerifier _verifier, bytes32 _trustedHash, uint64 _trustedHeight) public initializer {
+    function initialize(address _admin, IRiscZeroVerifier _verifier, bytes32 _trustedHash, uint64 _trustedHeight)
+        public
+        initializer
+    {
         __Ownable_init(_admin);
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
