@@ -19,7 +19,7 @@ use alloy::{
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
-use alloy_sol_types::sol;
+use alloy_sol_types::{sol, SolCall};
 use blobstream0_core::prove_block_range;
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
@@ -41,6 +41,11 @@ sol!(
     #[sol(rpc)]
     RiscZeroGroth16Verifier,
     "../contracts/out/RiscZeroGroth16Verifier.sol/RiscZeroGroth16Verifier.json"
+);
+sol!(
+    #[sol(rpc)]
+    ERC1967Proxy,
+    "../contracts/out/ERC1967Proxy.sol/ERC1967Proxy.json"
 );
 
 // Pulled from https://github.com/risc0/risc0-ethereum/blob/ebec385cc526adb9279c1af55d699c645ca6d694/contracts/src/groth16/ControlID.sol
@@ -174,16 +179,25 @@ async fn main() -> anyhow::Result<()> {
             };
 
             // Deploy the contract.
-            let contract = IBlobstream::deploy(
+            let implementation = IBlobstream::deploy(&provider).await?;
+            tracing::debug!(target: "blobstream0::cli", "Deployed implementation contract");
+
+            let proxy = ERC1967Proxy::deploy(
                 &provider,
-                admin_address,
-                verifier_address,
-                FixedBytes::<32>::from_hex(deploy.tm_block_hash)?,
-                deploy.tm_height,
+                implementation.address().clone(),
+                IBlobstream::initializeCall {
+                    _admin: admin_address,
+                    _verifier: verifier_address,
+                    _trustedHash: FixedBytes::<32>::from_hex(deploy.tm_block_hash)?,
+                    _trustedHeight: deploy.tm_height,
+                }
+                .abi_encode()
+                .into(),
             )
             .await?;
+            tracing::debug!(target: "blobstream0::cli", "Deployed proxy contract");
 
-            println!("deployed contract to address: {}", contract.address());
+            println!("deployed contract to address: {}", proxy.address());
         }
         BlobstreamCli::Service(service) => service.start().await?,
     }

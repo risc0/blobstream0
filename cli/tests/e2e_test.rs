@@ -16,7 +16,7 @@ use alloy::{
     network::EthereumWallet, node_bindings::Anvil, primitives::U256, providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
-use alloy_sol_types::sol;
+use alloy_sol_types::{sol, SolCall};
 use blobstream0_core::{post_batch, prove_block_range};
 use blobstream0_primitives::IBlobstream::{self, BinaryMerkleProof, DataRootTuple};
 use reqwest::header;
@@ -29,6 +29,11 @@ sol!(
     #[sol(rpc)]
     MockVerifier,
     "../contracts/out/RiscZeroMockVerifier.sol/RiscZeroMockVerifier.json"
+);
+sol!(
+    #[sol(rpc)]
+    ERC1967Proxy,
+    "../contracts/out/ERC1967Proxy.sol/ERC1967Proxy.json"
 );
 
 const CELESTIA_RPC_URL: &str = "https://celestia-testnet.brightlystake.com";
@@ -85,15 +90,24 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
         .unwrap();
 
     // Deploy the contract.
-    let contract = IBlobstream::deploy(
+    let implementation = IBlobstream::deploy(&provider).await?;
+    tracing::debug!(target: "blobstream0::cli", "Deployed implementation contract");
+
+    let contract = ERC1967Proxy::deploy(
         &provider,
-        anvil.addresses()[0],
-        verifier.address().clone(),
-        // Uses Celestia block hash at height below proving range on Mocha
-        trusted_block_hash,
-        BATCH_START as u64 - 1,
+        implementation.address().clone(),
+        IBlobstream::initializeCall {
+            _admin: anvil.addresses()[0],
+            _verifier: verifier.address().clone(),
+            _trustedHash: trusted_block_hash,
+            _trustedHeight: BATCH_START as u64 - 1,
+        }
+        .abi_encode()
+        .into(),
     )
     .await?;
+    // Pretend as if the proxy is the contract itself, requests forwarded to implementation.
+    let contract = IBlobstream::new(contract.address().clone(), provider.clone());
 
     let receipt =
         prove_block_range(tm_client.clone(), BATCH_START as u64..BATCH_END as u64).await?;
