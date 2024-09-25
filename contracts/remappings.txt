@@ -1,3 +1,4 @@
 risc0/=lib/risc0-ethereum/contracts/src/
 openzeppelin/=lib/openzeppelin-contracts/
+openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/
 blobstream/=lib/blobstream-contracts/src/
