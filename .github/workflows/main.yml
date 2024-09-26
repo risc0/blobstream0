@@ -67,7 +67,7 @@ jobs:
       - name: risczero toolchain install
         run: |
           cargo install cargo-binstall --version '=1.6.9' --locked
-          cargo binstall cargo-risczero --no-confirm --force
+          cargo binstall cargo-risczero@1.1.1 --no-confirm --force
           cargo risczero install
         # uses: risc0/risc0-ethereum/.github/actions/cargo-risczero-install@release-1.0
         # with:
