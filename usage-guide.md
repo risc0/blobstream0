@@ -17,6 +17,7 @@ RUST_LOG=info cargo run -p blobstream0 -- deploy \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 	--tm-height 9 \
 	--tm-block-hash 5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B \
+	--min-batch-size 7 \
 	--dev
 ```
 
@@ -56,7 +57,8 @@ RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- deploy \
 	--eth-rpc http://127.0.0.1:8545 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 	--tm-height 9 \
-	--tm-block-hash 5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B
+	--tm-block-hash 5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B \
+	--min-batch-size 7
 ```
 
 ### Sepolia
@@ -74,7 +76,8 @@ RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- deploy \
 	--private-key-hex <ADD KEY HERE> \
 	--tm-height 1802142 \
 	--tm-block-hash 6D8FD8ADC8FBD5E7765EC557D9DF86041F63F9109202A888D8D246B3BCC3B46A \
-	--verifier-address 0x925d8331ddc0a1F0d96E68CF073DFE1d92b69187
+	--verifier-address 0x925d8331ddc0a1F0d96E68CF073DFE1d92b69187 \
+	--min-batch-size 7
 ```
 
 Run the service with `RISC0_DEV_MODE=true` if you chose the mock verifier.

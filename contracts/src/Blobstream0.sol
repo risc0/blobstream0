@@ -56,6 +56,11 @@ contract Blobstream0 is IDAOracle, Initializable, UUPSUpgradeable, Ownable2StepU
     /// @notice Trusted block hash does not equal the commitment from the new batch.
     error InvalidTrustedHeaderHash();
 
+    /// @notice Minimum number of blocks required for a valid batch update. The batch size must be
+    ///         larger than this value.
+    /// @dev This is to ensure there is no DOS condition from doing single/small batch updates.
+    uint64 public minBatchSize;
+
     /// @notice RISC Zero verifier contract address.
     IRiscZeroVerifier public verifier;
 
@@ -85,10 +90,13 @@ contract Blobstream0 is IDAOracle, Initializable, UUPSUpgradeable, Ownable2StepU
     /// @dev DO NOT REMOVE! It is mandatory for upgradability.
     function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
-    function initialize(address _admin, IRiscZeroVerifier _verifier, bytes32 _trustedHash, uint64 _trustedHeight)
-        public
-        initializer
-    {
+    function initialize(
+        address _admin,
+        IRiscZeroVerifier _verifier,
+        bytes32 _trustedHash,
+        uint64 _trustedHeight,
+        uint64 _minBatchSize
+    ) public initializer {
         __Ownable_init(_admin);
         __Ownable2Step_init();
         __UUPSUpgradeable_init();
@@ -97,6 +105,7 @@ contract Blobstream0 is IDAOracle, Initializable, UUPSUpgradeable, Ownable2StepU
         latestBlockHash = _trustedHash;
         latestHeight = _trustedHeight;
         imageId = ImageID.LIGHT_CLIENT_GUEST_ID;
+        minBatchSize = _minBatchSize;
 
         // Proof nonce initialized as 1 to maintain compatibility with existing implementations and
         // avoid default value confusion.
@@ -123,7 +132,7 @@ contract Blobstream0 is IDAOracle, Initializable, UUPSUpgradeable, Ownable2StepU
     function updateRange(bytes calldata _commitBytes, bytes calldata _seal) external {
         RangeCommitment memory commit = abi.decode(_commitBytes, (RangeCommitment));
 
-        if (commit.newHeight <= latestHeight) {
+        if (commit.newHeight <= latestHeight + minBatchSize) {
             revert InvalidTargetHeight();
         }
         if (commit.trustedHeaderHash != latestBlockHash) {

@@ -101,6 +101,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
             _verifier: verifier.address().clone(),
             _trustedHash: trusted_block_hash,
             _trustedHeight: BATCH_START as u64 - 1,
+            _minBatchSize: 0,
         }
         .abi_encode()
         .into(),
