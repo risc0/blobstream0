@@ -52,7 +52,7 @@ export BONSAI_API_URL=<BONSAI_URL>
 > Note: you can instead use local proving and not set these env variables if on an x86 machine. See more https://dev.risczero.com/api/next/generating-proofs/proving-options
 
 ```
-RUST_LOG=info cargo run -p blobstream0 -- deploy \
+RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- deploy \
 	--eth-rpc http://127.0.0.1:8545 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 	--tm-height 9 \
@@ -69,7 +69,7 @@ Currently there are already groth16 and mock verifiers deployed to Sepolia.
 Deploy the blobstream contract with the `--verifier-address` from above:
 
 ```
-RUST_LOG=info cargo run -p blobstream0 -- deploy \
+RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- deploy \
 	--eth-rpc https://ethereum-sepolia-rpc.publicnode.com \
 	--private-key-hex <ADD KEY HERE> \
 	--tm-height 1802142 \
@@ -97,6 +97,35 @@ cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d
 cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "adminSetVerifier(address)" 0x5FbDB2315678afecb367f032d93F642f64180aa3
 
 cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "adminSetTrustedState(bytes32,uint64)" 0x5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B 9
+```
+
+#### Upgrading
+
+CLI:
+
+```
+RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- upgrade \
+	--eth-rpc http://127.0.0.1:8545 \
+	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+	--proxy-address 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+```
+
+Script:
+```
+cd contracts
+
+PROXY_ADDRESS=0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 forge script script/Upgrade.s.sol --rpc-url http://127.0.0.1:8545 --broadcast
+```
+
+Cast:
+```
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "upgradeToAndCall(address,bytes)" 0x9A676e781A523b5d0C0e43731313A708CB607508 0x
+```
+
+Get the current implementation address:
+
+```
+cast storage 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
 ```
 
 > Addresses and private key from default anvil test node
