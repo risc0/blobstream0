@@ -238,6 +238,7 @@ async fn main() -> anyhow::Result<()> {
                 .watch()
                 .await?;
             tracing::debug!(target: "blobstream0::cli", "Upgraded proxy contract to new implementation");
+            println!("Upgraded proxy contract to {}", implementation.address());
         }
         BlobstreamCli::Service(service) => service.start().await?,
     }
