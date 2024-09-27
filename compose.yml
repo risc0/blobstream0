@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+  blobstream0:
+    container_name: blobstream0
+    build:
+      context: .
+      dockerfile: ./dockerfiles/blobstream0.Dockerfile
+      target: final
+      args:
+        - BONSAI_API_URL
+        - BONSAI_API_KEY
+    env_file:
+      - .env
+    platform: linux/amd64
+    entrypoint: ["blobstream0", "service"]
+
+  blobstream0-dev:
+    container_name: blobstream0-dev
+    build:
+      context: .
+      dockerfile: ./dockerfiles/blobstream0-dev.Dockerfile
+    env_file:
+      - .env
+    platform: linux/amd64
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for Anvil to be ready..."
+        until curl --silent --fail http://anvil:8545 -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' > /dev/null 2>&1; do
+          sleep 1
+        done
+        echo "Anvil is ready"
+        if [ ! -f .deployed ]; then
+          echo "Deploying contracts..."
+          blobstream0 deploy --dev && touch .deployed
+        fi
+        exec blobstream0 service
+    depends_on:
+      anvil:
+        condition: service_healthy 
+    environment:
+      - ETH_RPC=http://anvil:8545
+
+  anvil:
+    container_name: anvil
+    image: ghcr.io/foundry-rs/foundry:latest
+    ports:
+      - "8545:8545"
+    platform: linux/amd64
+    entrypoint: ["anvil", "--host", "0.0.0.0", "--port", "8545"]
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "8545"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s

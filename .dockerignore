@@ -1,0 +1,6 @@
+.DS_Store
+target/
+.env
+
+contracts/cache
+contracts/out
