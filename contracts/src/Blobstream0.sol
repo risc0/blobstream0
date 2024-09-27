@@ -14,18 +14,20 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
 import {IRiscZeroVerifier} from "risc0/IRiscZeroVerifier.sol";
 import {ImageID} from "./ImageID.sol"; // auto-generated contract after running `cargo build`.
 import {IDAOracle} from "blobstream/IDAOracle.sol";
-import {Ownable, Ownable2Step} from "openzeppelin/contracts/access/Ownable2Step.sol";
+import {UUPSUpgradeable} from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {Ownable2StepUpgradeable} from "openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import {Initializable} from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
 import "./RangeCommitment.sol";
 import "blobstream/DataRootTuple.sol";
 import "blobstream/lib/tree/binary/BinaryMerkleTree.sol";
 
 /// @title A starter application using RISC Zero.
-contract Blobstream0 is IDAOracle, Ownable2Step {
+contract Blobstream0 is IDAOracle, Initializable, UUPSUpgradeable, Ownable2StepUpgradeable {
     /// @notice Data commitment stored for the block range [startBlock, endBlock) with proof nonce.
     /// NOTE: This event matches existing Blobstream contracts, for ease of integration.
     /// @param proofNonce The nonce of the proof.
@@ -61,7 +63,7 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     ///         The image ID is similar to the address of a smart contract.
     ///         It uniquely represents the logic of that guest program,
     ///         ensuring that only proofs generated from a pre-defined guest program.
-    bytes32 public imageId = ImageID.LIGHT_CLIENT_GUEST_ID;
+    bytes32 public imageId;
 
     /// @notice nonce for mapping block ranges to block merkle roots. This value is used as the key
     ///         to insert new roots in `merkleRoots`.
@@ -79,13 +81,22 @@ contract Blobstream0 is IDAOracle, Ownable2Step {
     /// @notice This is a mapping of proof nonces to merkle roots at those heights.
     mapping(uint256 => bytes32) merkleRoots;
 
-    /// @notice Initialize the contract, binding it to a specified RISC Zero verifier.
-    constructor(address _admin, IRiscZeroVerifier _verifier, bytes32 _trustedHash, uint64 _trustedHeight)
-        Ownable(_admin)
+    /// @dev onlyOwner specified for authorization for an upgrade.
+    /// @dev DO NOT REMOVE! It is mandatory for upgradability.
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+    function initialize(address _admin, IRiscZeroVerifier _verifier, bytes32 _trustedHash, uint64 _trustedHeight)
+        public
+        initializer
     {
+        __Ownable_init(_admin);
+        __Ownable2Step_init();
+        __UUPSUpgradeable_init();
+
         verifier = _verifier;
         latestBlockHash = _trustedHash;
         latestHeight = _trustedHeight;
+        imageId = ImageID.LIGHT_CLIENT_GUEST_ID;
 
         // Proof nonce initialized as 1 to maintain compatibility with existing implementations and
         // avoid default value confusion.

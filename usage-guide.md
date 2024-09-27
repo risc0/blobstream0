@@ -28,7 +28,7 @@ Start the service:
 RISC0_DEV_MODE=true RUST_LOG=blobstream0=debug,info cargo run -p blobstream0 -- service \
 	--tendermint-rpc https://celestia-testnet.brightlystake.com \
 	--eth-rpc http://127.0.0.1:8545/ \
-	--eth-address 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 \
+	--eth-address 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 	--batch-size 64
 ```
@@ -52,7 +52,7 @@ export BONSAI_API_URL=<BONSAI_URL>
 > Note: you can instead use local proving and not set these env variables if on an x86 machine. See more https://dev.risczero.com/api/next/generating-proofs/proving-options
 
 ```
-RUST_LOG=info cargo run -p blobstream0 -- deploy \
+RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- deploy \
 	--eth-rpc http://127.0.0.1:8545 \
 	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
 	--tm-height 9 \
@@ -69,7 +69,7 @@ Currently there are already groth16 and mock verifiers deployed to Sepolia.
 Deploy the blobstream contract with the `--verifier-address` from above:
 
 ```
-RUST_LOG=info cargo run -p blobstream0 -- deploy \
+RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- deploy \
 	--eth-rpc https://ethereum-sepolia-rpc.publicnode.com \
 	--private-key-hex <ADD KEY HERE> \
 	--tm-height 1802142 \
@@ -92,11 +92,50 @@ RUST_LOG=blobstream0=debug,info cargo run -p blobstream0 --release -- service \
 
 
 ```
-cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 "adminSetImageId(bytes32)" <IMAGE ID>
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "adminSetImageId(bytes32)" <IMAGE ID>
 
-cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 "adminSetVerifier(address)" 0x5FbDB2315678afecb367f032d93F642f64180aa3
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "adminSetVerifier(address)" 0x5FbDB2315678afecb367f032d93F642f64180aa3
 
-cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 "adminSetTrustedState(bytes32,uint64)" 0x5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B 9
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "adminSetTrustedState(bytes32,uint64)" 0x5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B 9
+```
+
+#### Upgrading
+
+CLI:
+
+```
+RUST_LOG=info,blobstream0=debug cargo run -p blobstream0 -- upgrade \
+	--eth-rpc http://127.0.0.1:8545 \
+	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+	--proxy-address 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+```
+
+Cast:
+
+```
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "upgradeToAndCall(address,bytes)" 0x9A676e781A523b5d0C0e43731313A708CB607508 0x
+```
+
+Get the current implementation address:
+
+```
+cast storage 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc
+```
+
+#### Ownership transfer
+
+Get current owner:
+
+```
+cast call 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "owner()(address)"
+```
+
+```
+cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "transferOwnership(address)" 0x70997970C51812dc3A010C7d01b50e0d17dc79C8
+
+cast send --private-key 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 "acceptOwnership()"
+
+
 ```
 
 > Addresses and private key from default anvil test node

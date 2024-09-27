@@ -19,7 +19,7 @@ use alloy::{
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
-use alloy_sol_types::sol;
+use alloy_sol_types::{sol, SolCall};
 use blobstream0_core::prove_block_range;
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
@@ -42,6 +42,11 @@ sol!(
     RiscZeroGroth16Verifier,
     "../contracts/out/RiscZeroGroth16Verifier.sol/RiscZeroGroth16Verifier.json"
 );
+sol!(
+    #[sol(rpc)]
+    ERC1967Proxy,
+    "../contracts/out/ERC1967Proxy.sol/ERC1967Proxy.json"
+);
 
 // Pulled from https://github.com/risc0/risc0-ethereum/blob/ebec385cc526adb9279c1af55d699c645ca6d694/contracts/src/groth16/ControlID.sol
 const CONTROL_ID: [u8; 32] =
@@ -56,6 +61,7 @@ enum BlobstreamCli {
     Service(service::ServiceArgs),
     ProveRange(ProveRangeArgs),
     Deploy(DeployArgs),
+    Upgrade(UpgradeArgs),
 }
 
 #[derive(Parser, Debug)]
@@ -85,7 +91,7 @@ struct DeployArgs {
     #[clap(long, env)]
     eth_rpc: String,
 
-    /// Hex encoded private key to use for submitting proofs to Ethereum
+    /// Hex encoded private key to use for deploying.
     #[clap(long, env)]
     private_key_hex: String,
 
@@ -108,6 +114,22 @@ struct DeployArgs {
     /// If deploying verifier, will it deploy the mock verifier
     #[clap(long)]
     dev: bool,
+}
+
+#[derive(Parser, Debug)]
+#[clap(author, version, about, long_about = None)]
+struct UpgradeArgs {
+    /// The Ethereum RPC URL
+    #[clap(long, env)]
+    eth_rpc: String,
+
+    /// Hex encoded private key to use for upgrading the contract. Must be the owner.
+    #[clap(long, env)]
+    private_key_hex: String,
+
+    /// Hex encoded address of admin for upgrades. Will default to the private key address.
+    #[clap(long, env)]
+    proxy_address: String,
 }
 
 #[tokio::main]
@@ -174,16 +196,49 @@ async fn main() -> anyhow::Result<()> {
             };
 
             // Deploy the contract.
-            let contract = IBlobstream::deploy(
+            let implementation = IBlobstream::deploy(&provider).await?;
+            tracing::debug!(target: "blobstream0::cli", "Deployed implementation contract to {}", implementation.address());
+
+            let proxy = ERC1967Proxy::deploy(
                 &provider,
-                admin_address,
-                verifier_address,
-                FixedBytes::<32>::from_hex(deploy.tm_block_hash)?,
-                deploy.tm_height,
+                implementation.address().clone(),
+                IBlobstream::initializeCall {
+                    _admin: admin_address,
+                    _verifier: verifier_address,
+                    _trustedHash: FixedBytes::<32>::from_hex(deploy.tm_block_hash)?,
+                    _trustedHeight: deploy.tm_height,
+                }
+                .abi_encode()
+                .into(),
             )
             .await?;
+            tracing::debug!(target: "blobstream0::cli", "Deployed proxy contract");
 
-            println!("deployed contract to address: {}", contract.address());
+            println!("deployed contract to address: {}", proxy.address());
+        }
+        BlobstreamCli::Upgrade(upgrade) => {
+            let signer: PrivateKeySigner = upgrade.private_key_hex.parse()?;
+
+            let wallet = EthereumWallet::from(signer);
+            let provider = ProviderBuilder::new()
+                .with_recommended_fillers()
+                .wallet(wallet)
+                .on_http(upgrade.eth_rpc.parse()?);
+
+            let proxy_address: Address = upgrade.proxy_address.parse()?;
+            println!("proxy address: {}", proxy_address);
+
+            let implementation = IBlobstream::deploy(&provider).await?;
+            tracing::debug!(target: "blobstream0::cli", "Deployed new implementation contract to {}", implementation.address());
+
+            IBlobstream::new(proxy_address, provider.clone())
+                .upgradeToAndCall(implementation.address().clone(), Default::default())
+                .send()
+                .await?
+                .watch()
+                .await?;
+            tracing::debug!(target: "blobstream0::cli", "Upgraded proxy contract to new implementation");
+            println!("Upgraded proxy contract to {}", implementation.address());
         }
         BlobstreamCli::Service(service) => service.start().await?,
     }
