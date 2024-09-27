@@ -111,6 +111,10 @@ struct DeployArgs {
     #[clap(long, env)]
     tm_block_hash: String,
 
+    /// Minimum batch size for head updates. The batch size must be larger than this value.
+    #[clap(long, env)]
+    min_batch_size: u64,
+
     /// If deploying verifier, will it deploy the mock verifier
     #[clap(long)]
     dev: bool,
@@ -207,6 +211,7 @@ async fn main() -> anyhow::Result<()> {
                     _verifier: verifier_address,
                     _trustedHash: FixedBytes::<32>::from_hex(deploy.tm_block_hash)?,
                     _trustedHeight: deploy.tm_height,
+                    _minBatchSize: deploy.min_batch_size,
                 }
                 .abi_encode()
                 .into(),
