@@ -40,7 +40,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the built binary from the builder stage
-COPY --from=builder /usr/src/blobstream/target/release/blobstream0 /usr/local/bin/blobstream0
+COPY --from=builder /app/target/release/blobstream0 /usr/local/bin/blobstream0
 
 # Set the entrypoint to the blobstream0 CLI
 ENTRYPOINT ["blobstream0"]
