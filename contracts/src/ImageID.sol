@@ -20,5 +20,5 @@ pragma solidity ^0.8.20;
 
 library ImageID {
     bytes32 public constant LIGHT_CLIENT_GUEST_ID =
-        bytes32(0x4383189e399cb4bb64bc8b77fbaefcfe4c3c6472867bdd61de5eb1d4334a34c6);
+        bytes32(0x3229c3708db83fd93c3f28275361870e40d75740c5c09498196474da8fc65f8e);
 }

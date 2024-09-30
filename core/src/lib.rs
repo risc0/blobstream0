@@ -20,7 +20,7 @@ use blobstream0_primitives::{
     IBlobstream::IBlobstreamInstance,
     LightBlockProveData, RangeCommitment,
 };
-use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
+// use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, ProverOpts, Receipt};
 use std::{ops::Range, sync::Arc, time::Duration};
@@ -33,6 +33,15 @@ use tracing::{instrument, Level};
 
 mod range_iterator;
 use range_iterator::LightBlockRangeIterator;
+
+// This is configured to use the default docker build path. The reason for the feature flag is
+// because we want a consistent docker image to build the program, which should not be run within
+// the dockerized service container.
+#[cfg(feature = "prebuilt-docker")]
+const LIGHT_CLIENT_GUEST_ELF: &[u8] = 
+    include_bytes!("../../target/riscv-guest/riscv32im-risc0-zkvm-elf/docker/light_client_guest/light-client-guest");
+#[cfg(not(feature = "prebuilt-docker"))]
+use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
 
 /// Currently set to the max allowed by tendermint RPC
 const HEADER_REQ_COUNT: u64 = 20;

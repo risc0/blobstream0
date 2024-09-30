@@ -18,3 +18,6 @@ tendermint-proto = { workspace = true }
 tendermint-rpc = { workspace = true, features = ["http-client"] }
 tokio = { version = "1.38.0", features = ["rt", "macros", "fs"] }
 tracing = "0.1.40"
+
+[features]
+prebuilt-docker = ["light-client-guest/prebuilt-docker"]
