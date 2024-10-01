@@ -50,9 +50,9 @@ sol!(
 
 // Pulled from https://github.com/risc0/risc0-ethereum/blob/ebec385cc526adb9279c1af55d699c645ca6d694/contracts/src/groth16/ControlID.sol
 const CONTROL_ID: [u8; 32] =
-    hex!("a516a057c9fbf5629106300934d48e0e775d4230e41e503347cad96fcbde7e2e");
+    hex!("8b6dcf11d463ac455361b41fb3ed053febb817491bdea00fdb340e45013b852e");
 const BN254_CONTROL_ID: [u8; 32] =
-    hex!("0eb6febcf06c5df079111be116f79bd8c7e85dc9448776ef9a59aaf2624ab551");
+    hex!("05a022e1db38457fb510bc347b30eb8f8cf3eda95587653d0eac19e1f10d164e");
 
 #[derive(Parser, Debug)]
 #[command(name = "blobstream0-cli")]

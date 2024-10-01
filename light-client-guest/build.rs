@@ -29,6 +29,12 @@ const SOLIDITY_IMAGE_ID_PATH: &str = "../contracts/src/ImageID.sol";
 const SOLIDITY_ELF_PATH: &str = "../contracts/test/Elf.sol";
 
 fn main() {
+    // If this feature is enabled, skip build and just use pre-built guest and EVM artifacts.
+    if cfg!(feature = "prebuilt-docker") {
+        println!("cargo:rerun-if-env-changed=CARGO_FEATURE_PREBUILT_DOCKER");
+        return;
+    }
+
     // Builds can be made deterministic, and thereby reproducible, by using Docker to build the
     // guest. Check the RISC0_USE_DOCKER variable and use Docker to build the guest if set.
     let use_docker = env::var("RISC0_USE_DOCKER").ok().map(|_| DockerOptions {
