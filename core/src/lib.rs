@@ -37,7 +37,7 @@ use range_iterator::LightBlockRangeIterator;
 // because we want a consistent docker image to build the program, which should not be run within
 // the dockerized service container.
 #[cfg(feature = "prebuilt-docker")]
-const LIGHT_CLIENT_GUEST_ELF: &[u8] = 
+const LIGHT_CLIENT_GUEST_ELF: &[u8] =
     include_bytes!("../../target/riscv-guest/riscv32im-risc0-zkvm-elf/docker/light_client_guest/light-client-guest");
 #[cfg(not(feature = "prebuilt-docker"))]
 use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
@@ -192,7 +192,10 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     // Assert that what is proven is expected based on the inputs.
     assert_eq!(expected_next_hash.as_bytes(), commitment.newHeaderHash);
     assert_eq!(expected_next_height, commitment.newHeight);
-    assert_eq!(expected_trusted_hash.as_bytes(), commitment.trustedHeaderHash.as_slice());
+    assert_eq!(
+        expected_trusted_hash.as_bytes(),
+        commitment.trustedHeaderHash.as_slice()
+    );
 
     Ok(receipt)
 }
