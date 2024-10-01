@@ -12,13 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use alloy::network::Ethereum;
+use alloy::providers::Provider;
+use alloy::transports::http::Http;
 use alloy::{
-    network::EthereumWallet, node_bindings::Anvil, primitives::U256, providers::ProviderBuilder,
+    network::EthereumWallet,
+    node_bindings::{Anvil, AnvilInstance},
+    primitives::U256,
+    providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
 use alloy_sol_types::{sol, SolCall};
 use blobstream0_core::{post_batch, prove_block_range};
-use blobstream0_primitives::IBlobstream::{self, BinaryMerkleProof, DataRootTuple};
+use blobstream0_primitives::IBlobstream::{
+    self, BinaryMerkleProof, DataRootTuple, IBlobstreamInstance,
+};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as, DisplayFromStr};
@@ -57,13 +65,18 @@ struct DataRootInclusionResponse {
     aunts: Vec<Vec<u8>>,
 }
 
-#[tokio::test(flavor = "multi_thread")]
-async fn e2e_basic_range() -> anyhow::Result<()> {
+async fn setup_test_environment() -> anyhow::Result<(
+    AnvilInstance,
+    IBlobstreamInstance<
+        Http<reqwest::Client>,
+        impl Provider<Http<reqwest::Client>, Ethereum>,
+        Ethereum,
+    >,
+)> {
     // Set dev mode for test.
     std::env::set_var("RISC0_DEV_MODE", "true");
 
     // Spin up a local Anvil node.
-    // Ensure `anvil` is available in $PATH.
     let anvil = Anvil::new().try_spawn()?;
 
     // Set up signer from the first default Anvil account (Alice).
@@ -108,8 +121,16 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     )
     .await?;
     // Pretend as if the proxy is the contract itself, requests forwarded to implementation.
-    let contract = IBlobstream::new(contract.address().clone(), provider.clone());
+    let contract = IBlobstream::new(contract.address().clone(), provider);
 
+    Ok((anvil, contract))
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn e2e_basic_range() -> anyhow::Result<()> {
+    let (_anvil, contract) = setup_test_environment().await?;
+
+    let tm_client = Arc::new(HttpClient::new(CELESTIA_RPC_URL)?);
     let receipt =
         prove_block_range(tm_client.clone(), BATCH_START as u64..BATCH_END as u64).await?;
 
