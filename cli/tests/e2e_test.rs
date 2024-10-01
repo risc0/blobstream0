@@ -262,6 +262,16 @@ async fn test_contract_upgrade() -> anyhow::Result<()> {
         new_implementation.address().as_slice()
     );
 
+    // Test that the new implementation works as normal
+    let tm_client = Arc::new(HttpClient::new(CELESTIA_RPC_URL)?);
+    let receipt =
+        prove_block_range(tm_client.clone(), BATCH_START as u64..BATCH_END as u64).await?;
+
+    post_batch(&contract, &receipt).await?;
+
+    let height = contract.latestHeight().call().await?;
+    assert_eq!(height._0, BATCH_END as u64 - 1);
+
     Ok(())
 }
 
