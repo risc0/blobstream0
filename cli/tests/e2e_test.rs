@@ -188,3 +188,118 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
 
     Ok(())
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_admin_functions() -> anyhow::Result<()> {
+    let (_anvil, contract) = setup_test_environment().await?;
+
+    // Test adminSetImageId
+    let new_image_id = [1u8; 32];
+    contract
+        .adminSetImageId(new_image_id.into())
+        .send()
+        .await?
+        .watch()
+        .await?;
+    let current_image_id = contract.imageId().call().await?;
+    assert_eq!(current_image_id._0, new_image_id);
+
+    // Test adminSetVerifier
+    let new_verifier = MockVerifier::deploy(contract.provider(), [1, 1, 1, 1].into()).await?;
+    contract
+        .adminSetVerifier(new_verifier.address().clone())
+        .send()
+        .await?
+        .watch()
+        .await?;
+    let current_verifier = contract.verifier().call().await?;
+    assert_eq!(current_verifier._0, *new_verifier.address());
+
+    // Test adminSetTrustedState
+    let new_trusted_hash = [2u8; 32];
+    let new_trusted_height = 100u64;
+    contract
+        .adminSetTrustedState(new_trusted_hash.into(), new_trusted_height.into())
+        .send()
+        .await?
+        .watch()
+        .await?;
+    let current_trusted_hash = contract.latestBlockHash().call().await?;
+    let current_trusted_height = contract.latestHeight().call().await?;
+    assert_eq!(current_trusted_hash._0, new_trusted_hash);
+    assert_eq!(current_trusted_height._0, new_trusted_height);
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_contract_upgrade() -> anyhow::Result<()> {
+    let (_anvil, contract) = setup_test_environment().await?;
+
+    // Deploy a new implementation
+    let new_implementation = IBlobstream::deploy(contract.provider()).await?;
+
+    // Upgrade the contract
+    contract
+        .upgradeToAndCall(new_implementation.address().clone(), vec![].into())
+        .send()
+        .await?
+        .watch()
+        .await?;
+
+    // Verify the upgrade
+    let implementation_slot: U256 = U256::from_str_radix(
+        "360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc",
+        16,
+    )
+    .unwrap();
+    let current_implementation = contract
+        .provider()
+        .get_storage_at(contract.address().clone(), implementation_slot)
+        .await?;
+    assert_eq!(
+        &current_implementation.to_be_bytes::<32>()[12..32],
+        new_implementation.address().as_slice()
+    );
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_ownership_transfer() -> anyhow::Result<()> {
+    let (anvil, contract) = setup_test_environment().await?;
+
+    // Get the initial owner
+    let initial_owner = contract.owner().call().await?;
+    assert_eq!(initial_owner._0, anvil.addresses()[0]);
+
+    // Transfer ownership
+    let new_owner = anvil.addresses()[1];
+    contract
+        .transferOwnership(new_owner)
+        .send()
+        .await?
+        .watch()
+        .await?;
+
+    // Accept ownership (need to switch to the new owner's wallet)
+    let new_owner_signer: PrivateKeySigner = anvil.keys()[1].clone().into();
+    let new_owner_wallet = EthereumWallet::from(new_owner_signer);
+    let new_owner_provider = ProviderBuilder::new()
+        .with_recommended_fillers()
+        .wallet(new_owner_wallet)
+        .on_http(anvil.endpoint().parse()?);
+    let contract_as_new_owner = IBlobstream::new(contract.address().clone(), new_owner_provider);
+    contract_as_new_owner
+        .acceptOwnership()
+        .send()
+        .await?
+        .watch()
+        .await?;
+
+    // Verify the new owner
+    let final_owner = contract.owner().call().await?;
+    assert_eq!(final_owner._0, new_owner);
+
+    Ok(())
+}
