@@ -20,7 +20,6 @@ use blobstream0_primitives::{
     IBlobstream::IBlobstreamInstance,
     LightBlockProveData, RangeCommitment,
 };
-// use light_client_guest::LIGHT_CLIENT_GUEST_ELF;
 use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{default_prover, is_dev_mode, sha::Digestible, ExecutorEnv, ProverOpts, Receipt};
 use std::{ops::Range, sync::Arc, time::Duration};
@@ -153,6 +152,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     );
     let expected_next_hash = input.untrusted_block.signed_header.header().hash();
     let expected_next_height = input.untrusted_height();
+    let expected_trusted_hash = input.trusted_block.signed_header.header().hash();
 
     TrustedLightBlock {
         signed_header: input.trusted_block.signed_header,
@@ -192,6 +192,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     // Assert that what is proven is expected based on the inputs.
     assert_eq!(expected_next_hash.as_bytes(), commitment.newHeaderHash);
     assert_eq!(expected_next_height, commitment.newHeight);
+    assert_eq!(expected_trusted_hash.as_bytes(), commitment.trustedHeaderHash.as_slice());
 
     Ok(receipt)
 }

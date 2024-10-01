@@ -91,6 +91,36 @@ RUST_LOG=blobstream0=debug,info cargo run -p blobstream0 --release -- service \
 	--batch-size 16
 ```
 
+### Dockerized service
+
+```console
+# Build the guest ELF in docker
+RISC0_USE_DOCKER=true cargo c
+
+# Build the docker image, which will use the docker built guest ELF
+docker build -f dockerfiles/blobstream0.Dockerfile --platform linux/amd64 -t blobstream0 .
+```
+
+And can use the `blobstream0` binary as:
+
+```console
+docker run blobstream0 deploy \
+	--eth-rpc http://host.docker.internal:8545 \
+	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+	--tm-height 9 \
+	--tm-block-hash 5C5451567973D8658A607D58F035BA9078291E33D880A0E6E67145C717E6B11B \
+	--min-batch-size 7
+```
+
+```console
+docker run -e RUST_LOG=blobstream0=debug,info -e BONSAI_API_KEY=<API KEY> -e BONSAI_API_URL=https://api.bonsai.xyz blobstream0 service \
+	--tendermint-rpc https://celestia-testnet.brightlystake.com \
+	--eth-rpc http://host.docker.internal:8545/ \
+	--eth-address 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 \
+	--private-key-hex 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+	--batch-size 64
+
+
 ### Admin transaction examples:
 
 
