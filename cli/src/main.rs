@@ -31,6 +31,7 @@ use tracing_subscriber::fmt::format;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
 mod service;
+mod utils;
 
 sol!(
     #[sol(rpc)]
@@ -173,6 +174,7 @@ async fn main() -> anyhow::Result<()> {
             let wallet = EthereumWallet::from(signer);
             let provider = ProviderBuilder::new()
                 .with_recommended_fillers()
+                .filler(utils::FireblocksFiller)
                 .wallet(wallet)
                 .on_http(deploy.eth_rpc.parse()?);
             let verifier_address: Address = if let Some(address) = deploy.verifier_address {
