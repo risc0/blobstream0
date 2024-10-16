@@ -1,5 +1,6 @@
 use alloy::{
     network::{Network, TransactionBuilder},
+    primitives::Address,
     providers::{
         fillers::{FillerControlFlow, TxFiller},
         Provider, SendableTx,
@@ -8,7 +9,9 @@ use alloy::{
 };
 
 #[derive(Clone, Copy, Debug, Default)]
-pub(crate) struct FireblocksFiller;
+pub(crate) struct FireblocksFiller {
+    pub sender: Address,
+}
 
 impl<N: Network> TxFiller<N> for FireblocksFiller {
     type Fillable = ();
@@ -21,14 +24,10 @@ impl<N: Network> TxFiller<N> for FireblocksFiller {
         if let Some(builder) = tx.as_mut_builder() {
             // 1 Ether max tx fee
             if let Some(fee) = builder.max_fee_per_gas() {
-                // builder.set_max_fee_per_gas(core::cmp::min(0x0de0b6b3a7640000, fee));
-                builder.set_max_fee_per_gas(1000000000);
+                builder.set_max_fee_per_gas(core::cmp::min(0x0de0b6b3a7640000, fee));
             }
 
-            // Set gas limit manually
-            builder.set_gas_limit(2_000_000);
-
-            // builder.set
+            builder.set_from(self.sender.clone());
         }
     }
 

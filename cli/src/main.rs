@@ -14,10 +14,8 @@
 
 use alloy::{
     hex::FromHex,
-    network::EthereumWallet,
     primitives::{hex, Address, FixedBytes},
     providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
 };
 use alloy_sol_types::{sol, SolCall};
 use blobstream0_core::prove_block_range;
@@ -30,8 +28,9 @@ use tokio::fs;
 use tracing_subscriber::fmt::format;
 use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
 
+#[cfg(feature = "fireblocks")]
+pub(crate) mod fireblocks;
 mod service;
-mod utils;
 
 sol!(
     #[sol(rpc)]
@@ -54,6 +53,35 @@ const CONTROL_ID: [u8; 32] =
     hex!("8b6dcf11d463ac455361b41fb3ed053febb817491bdea00fdb340e45013b852e");
 const BN254_CONTROL_ID: [u8; 32] =
     hex!("05a022e1db38457fb510bc347b30eb8f8cf3eda95587653d0eac19e1f10d164e");
+
+#[cfg(feature = "fireblocks")]
+macro_rules! setup_provider {
+    ($cli:ident) => {{
+        let fireblocks_address: Address = $cli.fireblocks_address.parse()?;
+        let provider = ProviderBuilder::new()
+            .fetch_chain_id()
+            .filler(crate::fireblocks::FireblocksFiller {
+                sender: fireblocks_address,
+            })
+            .on_http($cli.eth_rpc.parse()?);
+        (provider, fireblocks_address)
+    }};
+}
+
+#[cfg(not(feature = "fireblocks"))]
+macro_rules! setup_provider {
+    ($cli:ident) => {{
+        let signer: alloy::signers::local::PrivateKeySigner = $cli.private_key_hex.parse()?;
+        let signer_address = signer.address();
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .wallet(alloy::network::EthereumWallet::from(signer))
+            .on_http($cli.eth_rpc.parse()?);
+        (provider, signer_address)
+    }};
+}
+
+pub(crate) use setup_provider;
 
 #[derive(Parser, Debug)]
 #[command(name = "blobstream0-cli")]
@@ -92,6 +120,12 @@ struct DeployArgs {
     #[clap(long, env)]
     eth_rpc: String,
 
+    #[cfg(feature = "fireblocks")]
+    /// Fireblocks signer address.
+    #[clap(long, env)]
+    fireblocks_address: String,
+
+    #[cfg(not(feature = "fireblocks"))]
     /// Hex encoded private key to use for deploying.
     #[clap(long, env)]
     private_key_hex: String,
@@ -128,7 +162,13 @@ struct UpgradeArgs {
     #[clap(long, env)]
     eth_rpc: String,
 
-    /// Hex encoded private key to use for upgrading the contract. Must be the owner.
+    #[cfg(feature = "fireblocks")]
+    /// Fireblocks signer address.
+    #[clap(long, env)]
+    fireblocks_address: String,
+
+    #[cfg(not(feature = "fireblocks"))]
+    /// Hex encoded private key to use for deploying.
     #[clap(long, env)]
     private_key_hex: String,
 
@@ -163,20 +203,13 @@ async fn main() -> anyhow::Result<()> {
             fs::write(out, bincode::serialize(&receipt)?).await?;
         }
         BlobstreamCli::Deploy(deploy) => {
-            let signer: PrivateKeySigner = deploy.private_key_hex.parse()?;
-
+            let (provider, signer_address) = setup_provider!(deploy);
             let admin_address: Address = if let Some(address) = deploy.admin_address {
                 address.parse()?
             } else {
-                signer.address()
+                signer_address
             };
 
-            let wallet = EthereumWallet::from(signer);
-            let provider = ProviderBuilder::new()
-                .with_recommended_fillers()
-                .filler(utils::FireblocksFiller)
-                .wallet(wallet)
-                .on_http(deploy.eth_rpc.parse()?);
             let verifier_address: Address = if let Some(address) = deploy.verifier_address {
                 address.parse()?
             } else {
@@ -224,13 +257,7 @@ async fn main() -> anyhow::Result<()> {
             println!("deployed contract to address: {}", proxy.address());
         }
         BlobstreamCli::Upgrade(upgrade) => {
-            let signer: PrivateKeySigner = upgrade.private_key_hex.parse()?;
-
-            let wallet = EthereumWallet::from(signer);
-            let provider = ProviderBuilder::new()
-                .with_recommended_fillers()
-                .wallet(wallet)
-                .on_http(upgrade.eth_rpc.parse()?);
+            let (provider, _) = setup_provider!(upgrade);
 
             let proxy_address: Address = upgrade.proxy_address.parse()?;
             println!("proxy address: {}", proxy_address);

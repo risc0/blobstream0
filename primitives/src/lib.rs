@@ -150,7 +150,8 @@ fn commitment_signature_addresses(signed_header: &SignedHeader) -> BTreeSet<Id> 
         .commit
         .signatures
         .iter()
-        .filter_map(|sig| sig.is_commit().then(|| sig.validator_address().unwrap()))
+        .filter(|sig| sig.is_commit())
+        .map(|sig| sig.validator_address().unwrap())
         .collect()
 }
 
