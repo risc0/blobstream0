@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.3.1", features = ["node-bindings", "network", "providers", "transports", "signer-local"] }
+alloy = { version = "0.3.1", features = ["node-bindings", "network", "providers", "transports", "signer-local", "rpc-types"] }
 alloy-contract = "0.3.1"
 alloy-sol-types = { version = "0.8.2", features = ["json"] }
 anyhow = "1.0"
@@ -27,3 +27,4 @@ serde_with = { version = "3.8", features = ["base64"] }
 
 [features]
 prebuilt-docker = ["blobstream0-core/prebuilt-docker"]
+fireblocks = []

@@ -13,10 +13,8 @@
 // limitations under the License.
 
 use self::blobstream::BlobstreamService;
-use alloy::{
-    network::EthereumWallet, primitives::Address, providers::ProviderBuilder,
-    signers::local::PrivateKeySigner,
-};
+use super::setup_provider;
+use alloy::{primitives::Address, providers::ProviderBuilder};
 use blobstream0_primitives::IBlobstream;
 use clap::Parser;
 use tendermint_rpc::HttpClient;
@@ -38,7 +36,13 @@ pub(crate) struct ServiceArgs {
     #[clap(long, env)]
     eth_address: Address,
 
-    /// Hex encoded private key to use for submitting proofs to Ethereum
+    #[cfg(feature = "fireblocks")]
+    /// Fireblocks signer address.
+    #[clap(long, env)]
+    fireblocks_address: String,
+
+    #[cfg(not(feature = "fireblocks"))]
+    /// Hex encoded private key to use for deploying.
     #[clap(long, env)]
     private_key_hex: String,
 
@@ -49,29 +53,14 @@ pub(crate) struct ServiceArgs {
 
 impl ServiceArgs {
     pub(crate) async fn start(self) -> anyhow::Result<()> {
-        let ServiceArgs {
-            tendermint_rpc,
-            eth_rpc,
-            eth_address,
-            private_key_hex,
-            batch_size,
-        } = self;
+        let tm_client = HttpClient::new(self.tendermint_rpc.as_str())?;
 
-        let tm_client = HttpClient::new(tendermint_rpc.as_str())?;
+        let (provider, _) = setup_provider!(self);
 
-        let signer: PrivateKeySigner = private_key_hex.parse().expect("should parse private key");
-        let wallet = EthereumWallet::from(signer);
-
-        // Create a provider with the wallet.
-        let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
-            .wallet(wallet)
-            .on_http(eth_rpc.parse()?);
-
-        let contract = IBlobstream::new(eth_address, provider);
+        let contract = IBlobstream::new(self.eth_address, provider);
 
         tracing::info!(target: "blobstream0::service", "Starting service");
-        BlobstreamService::new(contract, tm_client, batch_size)
+        BlobstreamService::new(contract, tm_client, self.batch_size)
             .spawn()
             .await?;
 
