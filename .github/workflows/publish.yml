@@ -34,12 +34,17 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
 
+      - name: Install rust
+        uses: risc0/risc0/.github/actions/rustup@main
+
       # Install risczero toolchain to build the program ELF and image ID deterministically in docker.
       - name: risczero toolchain install
         run: |
           cargo install cargo-binstall --version '=1.6.9' --locked
           cargo binstall cargo-risczero@1.1.1 --no-confirm --force
           cargo risczero install
+      - name: Install Foundry
+        uses: risc0/foundry-toolchain@2fe7e70b520f62368a0e3c464f997df07ede420f
       - name: cargo check to build ELF and image ID
         env:
           RISC0_USE_DOCKER: true
