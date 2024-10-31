@@ -49,6 +49,8 @@ jobs:
         env:
           RISC0_USE_DOCKER: true
         run: cargo check
+      - name: Delete unnecessary cache files to save disk space for docker build
+        run: sudo rm -rf "/usr/local/share/boost" "$AGENT_TOOLSDIRECTORY" ./target/debug
 
       - name: Build and push Docker image
         id: push
