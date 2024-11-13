@@ -28,7 +28,7 @@ WORKDIR /app
 COPY . .
 
 # Build the project
-RUN cargo build -p blobstream0 --release --features prebuilt-docker
+RUN cargo build -p blobstream0 --release --features prebuilt-docker,fireblocks
 
 # Create a new stage for a smaller final image
 FROM debian:bullseye-slim as final
