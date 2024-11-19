@@ -54,7 +54,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: 'us-west-2'
-          role-to-assume: arn:aws:iam::559050242814:role/github-federated-actions-bonsai-services
+          role-to-assume: arn:aws:iam::559050242814:role/github-federated-actions-push-ecr
           role-chaining: true
           role-skip-session-tagging: true
       
@@ -65,7 +65,7 @@ jobs:
       - name: Build, tag, and push docker image to Amazon ECR
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          REPOSITORY: bonsaiservices
+          REPOSITORY: blobstream0
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG -f ./dockerfiles/blobstream0.Dockerfile .
