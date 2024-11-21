@@ -1,23 +1,26 @@
-permissions:
-  contents: read
-  # This configuration allows maintainers of this repo to create a branch and pull request based on
-  # the new branch. Restricting the push trigger to the main branch ensures that the PR only gets
-  # built once.
+name: Check & Test
+
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: main
   workflow_dispatch:
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   RISC0_TOOLCHAIN_VERSION: v2024-04-22.0
   RISC0_MONOREPO_REF: "release-1.0"
+
 jobs:
   check:
-    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
+    runs-on: [self-hosted, prod, Linux, X64, cpu]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,7 +50,8 @@ jobs:
         run: |
           [ "$(grep -re 'DO[_ ]\?NOT[_ ]\?MERGE' $(git ls-tree --full-tree --name-only -r HEAD) | tee /dev/fd/2 | wc -l)" -eq "0" ]
   test:
-    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name
+    runs-on: [self-hosted, prod, Linux, X64, cpu]
     steps:
       # This is a workaround from: https://github.com/actions/checkout/issues/590#issuecomment-970586842
       - name: checkout dummy commit (submodule bug workaround)
