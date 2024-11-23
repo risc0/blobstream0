@@ -16,6 +16,7 @@ RUN foundryup
 
 # Install cargo risczero
 RUN curl -L https://risczero.com/install | bash
+ENV PATH="/root/.risc0/bin:${PATH}"
 RUN rzup install
 
 # Create and set permissions for the /app directory
