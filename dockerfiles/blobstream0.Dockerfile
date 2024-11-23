@@ -14,9 +14,9 @@ RUN curl -L https://foundry.paradigm.xyz | bash
 ENV PATH="/root/.foundry/bin:${PATH}"
 RUN foundryup
 
-RUN cargo install cargo-binstall --version '=1.6.9' --locked
-RUN cargo binstall cargo-risczero@1.1.1 --no-confirm --force
-RUN cargo risczero install
+# Install cargo risczero
+RUN curl -L https://risczero.com/install | bash
+RUN rzup install
 
 # Create and set permissions for the /app directory
 # RUN mkdir -p /app && chown -R nobody:nobody /app
