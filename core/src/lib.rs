@@ -248,7 +248,7 @@ where
     update_tx
         .send()
         .await?
-        .with_timeout(Some(Duration::from_secs(60)))
+        .with_timeout(Some(Duration::from_secs(120)))
         .watch()
         .await?;
 

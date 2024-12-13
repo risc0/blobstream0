@@ -12,6 +12,21 @@ services:
       - .env
     platform: linux/amd64
     entrypoint: ["blobstream0", "service"]
+    depends_on:
+      fireblocks:
+        condition: service_started
+
+  fireblocks:
+    container_name: fireblocks
+    build:
+      context: .
+      dockerfile: ./dockerfiles/fireblocks.Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8545:8545"
+    platform: linux/amd64
+    entrypoint: ["fireblocks-json-rpc"]
 
   blobstream0-dev:
     container_name: blobstream0-dev
