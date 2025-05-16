@@ -63,7 +63,7 @@ macro_rules! setup_provider {
             .filler(crate::fireblocks::FireblocksFiller {
                 sender: fireblocks_address,
             })
-            .on_http($cli.eth_rpc.parse()?);
+            .connect_http($cli.eth_rpc.parse()?);
         (provider, fireblocks_address)
     }};
 }
@@ -74,9 +74,8 @@ macro_rules! setup_provider {
         let signer: alloy::signers::local::PrivateKeySigner = $cli.private_key_hex.parse()?;
         let signer_address = signer.address();
         let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
             .wallet(alloy::network::EthereumWallet::from(signer))
-            .on_http($cli.eth_rpc.parse()?);
+            .connect_http($cli.eth_rpc.parse()?);
         (provider, signer_address)
     }};
 }

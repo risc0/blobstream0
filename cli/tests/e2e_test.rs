@@ -14,7 +14,6 @@
 
 use alloy::network::Ethereum;
 use alloy::providers::Provider;
-use alloy::transports::http::Http;
 use alloy::{
     network::EthereumWallet,
     node_bindings::{Anvil, AnvilInstance},
@@ -67,11 +66,7 @@ struct DataRootInclusionResponse {
 
 async fn setup_test_environment() -> anyhow::Result<(
     AnvilInstance,
-    IBlobstreamInstance<
-        Http<reqwest::Client>,
-        impl Provider<Http<reqwest::Client>, Ethereum>,
-        Ethereum,
-    >,
+    IBlobstreamInstance<impl Provider<Ethereum>, Ethereum>,
 )> {
     // Set dev mode for test.
     std::env::set_var("RISC0_DEV_MODE", "true");
@@ -85,10 +80,7 @@ async fn setup_test_environment() -> anyhow::Result<(
 
     // Create a provider with the wallet.
     let rpc_url = anvil.endpoint().parse()?;
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(wallet)
-        .on_http(rpc_url);
+    let provider = ProviderBuilder::new().wallet(wallet).connect_http(rpc_url);
 
     let verifier = MockVerifier::deploy(&provider, [0, 0, 0, 0].into()).await?;
 
@@ -137,7 +129,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
     post_batch(&contract, &receipt).await?;
 
     let height = contract.latestHeight().call().await?;
-    assert_eq!(height._0, BATCH_END as u64 - 1);
+    assert_eq!(height, BATCH_END as u64 - 1);
 
     // Somewhat hacky to do this manually, seems no Rust tooling for this endpoint.
     let http_client = reqwest::Client::new();
@@ -184,7 +176,7 @@ async fn e2e_basic_range() -> anyhow::Result<()> {
         )
         .call()
         .await?;
-    assert!(is_valid._0);
+    assert!(is_valid);
 
     Ok(())
 }
@@ -202,7 +194,7 @@ async fn test_admin_functions() -> anyhow::Result<()> {
         .watch()
         .await?;
     let current_image_id = contract.imageId().call().await?;
-    assert_eq!(current_image_id._0, new_image_id);
+    assert_eq!(current_image_id, new_image_id);
 
     // Test adminSetVerifier
     let new_verifier = MockVerifier::deploy(contract.provider(), [1, 1, 1, 1].into()).await?;
@@ -213,7 +205,7 @@ async fn test_admin_functions() -> anyhow::Result<()> {
         .watch()
         .await?;
     let current_verifier = contract.verifier().call().await?;
-    assert_eq!(current_verifier._0, *new_verifier.address());
+    assert_eq!(current_verifier, *new_verifier.address());
 
     // Test adminSetTrustedState
     let new_trusted_hash = [2u8; 32];
@@ -226,8 +218,8 @@ async fn test_admin_functions() -> anyhow::Result<()> {
         .await?;
     let current_trusted_hash = contract.latestBlockHash().call().await?;
     let current_trusted_height = contract.latestHeight().call().await?;
-    assert_eq!(current_trusted_hash._0, new_trusted_hash);
-    assert_eq!(current_trusted_height._0, new_trusted_height);
+    assert_eq!(current_trusted_hash, new_trusted_hash);
+    assert_eq!(current_trusted_height, new_trusted_height);
 
     Ok(())
 }
@@ -270,7 +262,7 @@ async fn test_contract_upgrade() -> anyhow::Result<()> {
     post_batch(&contract, &receipt).await?;
 
     let height = contract.latestHeight().call().await?;
-    assert_eq!(height._0, BATCH_END as u64 - 1);
+    assert_eq!(height, BATCH_END as u64 - 1);
 
     Ok(())
 }
@@ -281,7 +273,7 @@ async fn test_ownership_transfer() -> anyhow::Result<()> {
 
     // Get the initial owner
     let initial_owner = contract.owner().call().await?;
-    assert_eq!(initial_owner._0, anvil.addresses()[0]);
+    assert_eq!(initial_owner, anvil.addresses()[0]);
 
     // Transfer ownership
     let new_owner = anvil.addresses()[1];
@@ -296,9 +288,8 @@ async fn test_ownership_transfer() -> anyhow::Result<()> {
     let new_owner_signer: PrivateKeySigner = anvil.keys()[1].clone().into();
     let new_owner_wallet = EthereumWallet::from(new_owner_signer);
     let new_owner_provider = ProviderBuilder::new()
-        .with_recommended_fillers()
         .wallet(new_owner_wallet)
-        .on_http(anvil.endpoint().parse()?);
+        .connect_http(anvil.endpoint().parse()?);
     let contract_as_new_owner = IBlobstream::new(contract.address().clone(), new_owner_provider);
     contract_as_new_owner
         .acceptOwnership()
@@ -309,7 +300,7 @@ async fn test_ownership_transfer() -> anyhow::Result<()> {
 
     // Verify the new owner
     let final_owner = contract.owner().call().await?;
-    assert_eq!(final_owner._0, new_owner);
+    assert_eq!(final_owner, new_owner);
 
     Ok(())
 }

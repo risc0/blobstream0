@@ -4,8 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy-primitives = "0.8.2"
-alloy-sol-types = { version = "0.8.2", features = ["json"] }
+alloy-primitives = "1.1"
+alloy-sol-types = { version = "1.1", features = ["json"] }
 prost = { version = "0.12", default-features = false }
 prost-types = { version = "0.12", default-features = false }
 sha2 = { workspace = true }
@@ -17,4 +17,4 @@ tendermint-proto = { workspace = true }
 thiserror = "1.0"
 
 [target.'cfg(not(target_os = "zkvm"))'.dependencies]
-alloy-contract = "0.3.1"
+alloy-contract = "1.0.3"
