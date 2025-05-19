@@ -1,7 +1,5 @@
 # Blobstream Zero
 
-> WARNING: This project is currently experimental and not recommended for any production use cases yet
-
 Blobstream Zero is an implementation of [Blobstream](https://docs.celestia.org/developers/blobstream) using the [RISC Zero zkVM](https://www.risczero.com/) to verify Celestia blocks.
 
 The blocks are verified using a zk Tendermint light client with the [light-client-guest](./light-client-guest/guest/src/main.rs) program, which will verify the light client block transition as well as generating a merkle root of all intermediate blocks. This proof is then verified on Ethereum using the [Blobstream solidity contracts](./contracts/src/).
@@ -40,3 +38,7 @@ cargo run -p blobstream0 -- --help
 For docs on running the Blobstream service, see [usage-guide.md](./usage-guide.md).
 
 > Note: This CLI as well as other APIs will change in the short term. If you need anything specific from this, [open an issue](https://github.com/risc0/blobstream0/issues/new)!
+
+### Audits
+
+https://github.com/risc0/rz-security/blob/2eba41415cfbadaf3521f619e7542d4e4bcd1f68/audits/blobstream/veridise-blobstream-20240909.pdf
