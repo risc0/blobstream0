@@ -1,4 +1,4 @@
-// Copyright 2024 RISC Zero, Inc.
+// Copyright 2025 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloy::{network::Network, providers::Provider, transports::Transport};
-use alloy_sol_types::SolValue;
+use alloy::sol_types::SolValue;
+use alloy::{network::Network, providers::Provider};
 use anyhow::Context;
 use blobstream0_primitives::{
     proto::{TrustedLightBlock, UntrustedLightBlock},
@@ -188,7 +188,7 @@ pub async fn prove_block(input: LightBlockProveData) -> anyhow::Result<Receipt> 
     })
     .await??;
     let receipt = prove_info.receipt;
-    let commitment = RangeCommitment::abi_decode(&receipt.journal.bytes, true)?;
+    let commitment = RangeCommitment::abi_decode_validate(&receipt.journal.bytes)?;
     // Assert that what is proven is expected based on the inputs.
     assert_eq!(expected_next_hash.as_bytes(), commitment.newHeaderHash);
     assert_eq!(expected_next_height, commitment.newHeight);
@@ -229,13 +229,12 @@ pub async fn prove_block_range(
 
 /// Post batch proof to Eth based chain.
 #[instrument(target = "blobstream0::core", skip(contract, receipt), err, level = Level::DEBUG)]
-pub async fn post_batch<T, P, N>(
-    contract: &IBlobstreamInstance<T, P, N>,
+pub async fn post_batch<P, N>(
+    contract: &IBlobstreamInstance<P, N>,
     receipt: &Receipt,
 ) -> anyhow::Result<()>
 where
-    T: Transport + Clone,
-    P: Provider<T, N>,
+    P: Provider<N>,
     N: Network,
 {
     tracing::debug!(target: "blobstream0::core", "Posting batch (dev mode={})", is_dev_mode());

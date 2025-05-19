@@ -1,4 +1,4 @@
-// Copyright 2024 RISC Zero, Inc.
+// Copyright 2025 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
 
 use alloy_sol_types::SolValue;
 use blobstream0_primitives::proto::{TrustedLightBlock, UntrustedLightBlock};
-use blobstream0_primitives::{generate_bitmap, RangeCommitment};
 use blobstream0_primitives::{build_merkle_root, expect_block_hash, light_client_verify};
+use blobstream0_primitives::{generate_bitmap, RangeCommitment};
 use risc0_zkvm::guest::env;
 use tendermint_light_client_verifier::{types::Header, Verdict};
 use tendermint_proto::Protobuf;
@@ -46,7 +46,6 @@ fn main() {
     }
     // Assert all bytes have been read, as a sanity check.
     assert!(cursor.is_empty());
-
 
     // Generate validator bitmap of intersection of trusted and untrusted block signatures.
     let validator_bitmap = generate_bitmap(&trusted_block, &untrusted_block);

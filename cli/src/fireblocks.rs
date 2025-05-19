@@ -1,4 +1,4 @@
-// Copyright 2024 RISC Zero, Inc.
+// Copyright 2025 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ use alloy::{
         fillers::{FillerControlFlow, TxFiller},
         Provider, SendableTx,
     },
-    transports::{Transport, TransportResult},
+    transports::TransportResult,
 };
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -45,14 +45,13 @@ impl<N: Network> TxFiller<N> for FireblocksFiller {
         }
     }
 
-    async fn prepare<P, T>(
+    async fn prepare<P>(
         &self,
         _provider: &P,
         _tx: &<N as Network>::TransactionRequest,
     ) -> TransportResult<Self::Fillable>
     where
-        P: Provider<T, N>,
-        T: Transport + Clone,
+        P: Provider<N>,
     {
         Ok(())
     }

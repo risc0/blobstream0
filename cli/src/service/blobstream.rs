@@ -1,4 +1,4 @@
-// Copyright 2024 RISC Zero, Inc.
+// Copyright 2025 RISC Zero, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ use std::future::Future;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use alloy::{network::Network, primitives::FixedBytes, providers::Provider, transports::Transport};
+use alloy::{network::Network, primitives::FixedBytes, providers::Provider};
 use anyhow::Context;
 use blobstream0_core::{post_batch, prove_block_range};
 use blobstream0_primitives::IBlobstream::IBlobstreamInstance;
@@ -24,15 +24,15 @@ use rand::Rng;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::task::JoinError;
 
-pub(crate) struct BlobstreamService<T, P, N> {
-    contract: Arc<IBlobstreamInstance<T, P, N>>,
+pub(crate) struct BlobstreamService<P, N> {
+    contract: Arc<IBlobstreamInstance<P, N>>,
     tm_client: Arc<HttpClient>,
     batch_size: u64,
 }
 
-impl<T, P, N> BlobstreamService<T, P, N> {
+impl<P, N> BlobstreamService<P, N> {
     pub fn new(
-        contract: IBlobstreamInstance<T, P, N>,
+        contract: IBlobstreamInstance<P, N>,
         tm_client: HttpClient,
         batch_size: u64,
     ) -> Self {
@@ -44,10 +44,9 @@ impl<T, P, N> BlobstreamService<T, P, N> {
     }
 }
 
-impl<T, P, N> BlobstreamService<T, P, N>
+impl<P, N> BlobstreamService<P, N>
 where
-    T: Transport + Clone,
-    P: Provider<T, N> + 'static,
+    P: Provider<N> + 'static,
     N: Network,
 {
     async fn fetch_current_state(&self) -> Result<anyhow::Result<BlobstreamState>, JoinError> {
@@ -66,8 +65,8 @@ where
         let (height, hash, tm_height) = tokio::try_join!(height_task, hash_task, tm_height_task)?;
 
         let result = || {
-            let height = height?._0;
-            let eth_verified_hash = hash?._0;
+            let height = height?;
+            let eth_verified_hash = hash?;
             let tm_height = tm_height?.value();
             Ok(BlobstreamState {
                 eth_verified_height: height,
